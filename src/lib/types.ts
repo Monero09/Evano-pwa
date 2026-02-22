@@ -23,6 +23,9 @@ export interface Video {
     uploader_id?: string;
     ads_enabled?: boolean;
     preroll_ad_id?: string | null;
+    preroll_ad_id_2?: string | null;
+    banner_ad_id_1?: string | null;
+    banner_ad_id_2?: string | null;
     duration_seconds?: number | null;
     resolution?: string;
     is_featured?: boolean;

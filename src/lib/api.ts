@@ -244,14 +244,27 @@ export async function getAds(type?: 'video' | 'banner'): Promise<Ad[]> {
     }
 }
 
-export async function assignAdToVideo(videoId: string, adId: string | null) {
+export async function assignAdsToVideo(
+    videoId: string,
+    ads: {
+        preroll1?: string | null;
+        preroll2?: string | null;
+        banner1?: string | null;
+        banner2?: string | null;
+    }
+) {
     const { data, error } = await supabase
         .from('videos')
-        .update({ preroll_ad_id: adId })
+        .update({
+            preroll_ad_id: ads.preroll1 ?? null,
+            preroll_ad_id_2: ads.preroll2 ?? null,
+            banner_ad_id_1: ads.banner1 ?? null,
+            banner_ad_id_2: ads.banner2 ?? null,
+        })
         .eq('id', videoId)
         .select();
 
-    if (error) throw new Error("Failed to assign ad");
+    if (error) throw new Error(`Failed to assign ads: ${error.message}`);
     return data;
 }
 

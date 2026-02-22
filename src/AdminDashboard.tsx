@@ -67,25 +67,33 @@ export default function AdminDashboard() {
         })));
 
         try {
-            // First, set all videos to is_featured = false
-            await supabase
+            // 1. Find the currently featured video and turn it off safely
+            const { error: resetError } = await supabase
                 .from('videos')
                 .update({ is_featured: false })
-                .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+                .eq('is_featured', true);
 
-            // Then, set the selected video to is_featured = true
-            const { error } = await supabase
+            if (resetError) {
+                console.error("Reset Error:", resetError);
+                throw new Error("Failed to reset old banner");
+            }
+
+            // 2. Turn on the new featured video
+            const { error: updateError } = await supabase
                 .from('videos')
                 .update({ is_featured: true })
                 .eq('id', videoId);
 
-            if (error) throw error;
+            if (updateError) {
+                console.error("Update Error:", updateError);
+                throw new Error("Failed to set new banner");
+            }
 
             showToast('Banner updated successfully!', 'success');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error setting featured:', error);
-            showToast('Failed to set featured banner', 'error');
-            setApprovedVideos(previousState); // Revert on failure
+            showToast(error.message || 'Failed to set featured banner', 'error');
+            setApprovedVideos(previousState); // Revert UI on failure
         }
     };
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory } from './lib/api';
+import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory, getAdById } from './lib/api';
 import type { Video } from './lib/types';
 import { useAuth } from './components/AuthProvider';
 
@@ -11,9 +11,11 @@ import { useAuth } from './components/AuthProvider';
 type PlayerProps = {
     videoSrc: string;
     poster?: string;
+    preRollAdSrc?: string | null;
+    bannerAdSrc?: string | null;
 };
 
-function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
+function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -25,7 +27,29 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
     const [showControls, setShowControls] = useState(true);
     const [showBannerAd, setShowBannerAd] = useState(false);
 
+    const [currentSrc, setCurrentSrc] = useState(preRollAdSrc || videoSrc);
+    const [isShowingAd, setIsShowingAd] = useState(!!preRollAdSrc);
+
     const hideTimerRef = useRef<number | null>(null);
+
+    // Reset src and ad state when the video or ad source changes (e.g. navigating to a new video)
+    useEffect(() => {
+        setCurrentSrc(preRollAdSrc || videoSrc);
+        setIsShowingAd(!!preRollAdSrc);
+    }, [videoSrc, preRollAdSrc]);
+
+    // Handler: when the current video segment ends
+    const handleVideoEnded = () => {
+        if (isShowingAd) {
+            // Ad finished — switch to the real video and autoplay
+            setCurrentSrc(videoSrc);
+            setIsShowingAd(false);
+            // Small timeout ensures the src swap is committed before play()
+            setTimeout(() => {
+                videoRef.current?.play();
+            }, 50);
+        }
+    };
 
     // Auto-hide controls
     useEffect(() => {
@@ -49,21 +73,21 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
         };
     }, [isPlaying]);
 
-    // Show banner ad 5 seconds after playback starts (NOT for YouTube unlisted videos)
+    // Show banner ad image 5 seconds after main video starts (not during pre-roll, not for YouTube)
     useEffect(() => {
-        if (!isPlaying) return;
+        // Only show when main video is playing (not during ad)
+        if (!isPlaying || isShowingAd) return;
 
-        // Don't show ads for YouTube videos
-        if (videoSrc && (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be'))) {
-            return;
-        }
+        // Skip if no banner ad or if it's a YouTube video
+        if (!bannerAdSrc) return;
+        if (videoSrc && (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be'))) return;
 
         const timer = setTimeout(() => {
             setShowBannerAd(true);
         }, 5000);
 
         return () => clearTimeout(timer);
-    }, [isPlaying, videoSrc]);
+    }, [isPlaying, isShowingAd, bannerAdSrc, videoSrc]);
 
     // Update time and duration
     useEffect(() => {
@@ -128,12 +152,27 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
 
     const toggleFullscreen = async () => {
         const container = containerRef.current;
-        if (!container) return;
+        const video = videoRef.current;
+        if (!container || !video) return;
 
-        if (!document.fullscreenElement) {
-            await container.requestFullscreen().catch(() => { });
-        } else {
-            await document.exitFullscreen().catch(() => { });
+        try {
+            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+                if (container.requestFullscreen) {
+                    await container.requestFullscreen();
+                } else if ((container as any).webkitRequestFullscreen) {
+                    (container as any).webkitRequestFullscreen();
+                } else if ((video as any).webkitEnterFullscreen) {
+                    (video as any).webkitEnterFullscreen(); // Critical for iOS Safari
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if ((document as any).webkitExitFullscreen) {
+                    (document as any).webkitExitFullscreen();
+                }
+            }
+        } catch (e) {
+            console.error("Fullscreen error:", e);
         }
     };
 
@@ -167,10 +206,35 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
                     backgroundColor: '#000'
                 }}
             >
+                {/* "Ad playing" overlay */}
+                {isShowingAd && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
+                            background: 'rgba(0,0,0,0.65)',
+                            color: 'rgba(255,255,255,0.85)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            letterSpacing: '0.05em',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            backdropFilter: 'blur(6px)',
+                            border: '1px solid rgba(214,0,116,0.4)',
+                            zIndex: 20,
+                            pointerEvents: 'none',
+                            textTransform: 'uppercase'
+                        }}
+                    >
+                        Ad playing…
+                    </div>
+                )}
+
                 <video
                     ref={videoRef}
-                    src={videoSrc}
-                    poster={poster}
+                    src={currentSrc}
+                    poster={isShowingAd ? undefined : poster}
                     style={{
                         position: 'absolute',
                         top: 0,
@@ -180,6 +244,7 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
                         objectFit: 'contain'
                     }}
                     playsInline
+                    onEnded={handleVideoEnded}
                 />
 
                 {/* Center Play/Pause Icon Animation */}
@@ -202,25 +267,23 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
                     </div>
                 )}
 
-                {/* Banner Ad (Lower Third) */}
-                {showBannerAd && (
+                {/* Banner Image Ad (Lower Third) */}
+                {showBannerAd && bannerAdSrc && (
                     <div
                         style={{
                             position: 'absolute',
                             bottom: '80px',
                             left: '20px',
-                            background: 'linear-gradient(90deg, rgba(88, 28, 135, 0.95), rgba(219, 39, 119, 0.95))',
-                            padding: '15px 20px',
                             borderRadius: '8px',
-                            color: 'white',
-                            maxWidth: '400px',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(214, 0, 116, 0.3)',
+                            overflow: 'hidden',
+                            maxWidth: '340px',
                             animation: 'slideInLeft 0.5s ease-out',
                             zIndex: 5,
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+                            border: '1px solid rgba(214,0,116,0.35)'
                         }}
                     >
+                        {/* Close button */}
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -228,28 +291,46 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
                             }}
                             style={{
                                 position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                background: 'rgba(0,0,0,0.5)',
+                                top: '6px',
+                                right: '6px',
+                                background: 'rgba(0,0,0,0.65)',
                                 border: 'none',
                                 color: 'white',
-                                width: '24px',
-                                height: '24px',
+                                width: '22px',
+                                height: '22px',
                                 borderRadius: '50%',
                                 cursor: 'pointer',
-                                fontSize: '14px',
+                                fontSize: '13px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                zIndex: 6
                             }}
                         >
                             ×
                         </button>
-                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '5px' }}>SPONSORED</div>
-                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>Premium Content Awaits</div>
-                        <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.9 }}>
-                            Upgrade to Premium for ad-free streaming
+                        {/* Sponsored label */}
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            background: 'rgba(0,0,0,0.55)',
+                            fontSize: '9px',
+                            color: 'rgba(255,255,255,0.7)',
+                            padding: '3px 8px',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            pointerEvents: 'none'
+                        }}>
+                            Sponsored
                         </div>
+                        <img
+                            src={bannerAdSrc}
+                            alt="Advertisement"
+                            style={{ display: 'block', width: '100%', maxHeight: '140px', objectFit: 'cover' }}
+                            draggable={false}
+                        />
                     </div>
                 )}
 
@@ -345,6 +426,25 @@ function CustomVideoPlayer({ videoSrc, poster }: PlayerProps) {
                     0% { transform: translateX(-100%); opacity: 0; }
                     100% { transform: translateX(0); opacity: 1; }
                 }
+                @media (max-width: 768px) {
+                    .custom-controls {
+                        padding: 10px !important;
+                        gap: 5px !important;
+                    }
+                    .custom-controls button {
+                        font-size: 18px !important;
+                    }
+                    .custom-controls div {
+                        font-size: 12px !important;
+                    }
+                    div[style*="bottom: 80px"] {
+                        bottom: 60px !important;
+                        left: 10px !important;
+                        right: 10px !important;
+                        max-width: none !important;
+                        padding: 10px !important;
+                    }
+                }
             `}</style>
         </div>
     );
@@ -360,6 +460,8 @@ export default function WatchPage() {
     const { user, tier } = useAuth();
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
+    const [adUrl, setAdUrl] = useState<string | null>(null);
+    const [bannerAdUrl, setBannerAdUrl] = useState<string | null>(null);
     const [inMyList, setInMyList] = useState(false);
 
     useEffect(() => {
@@ -373,25 +475,50 @@ export default function WatchPage() {
 
     // Effect for Views, History, and Ads
     useEffect(() => {
-        if (video) {
-            import('./lib/api').then(mod => mod.incrementView(video.id));
+        if (!video) return;
 
-            // 1. History & Check List (if logged in)
-            if (user) {
-                addToHistory(user.id, video.id);
-                checkInWatchLater(user.id, video.id).then(setInMyList);
-            }
+        import('./lib/api').then(mod => mod.incrementView(video.id));
 
-            // 2. Load pre-roll ad (disabled for now - using banner instead)
-            // if (tier === 'free' && video.ads_enabled && video.preroll_ad_id) {
-            //     getAdById(video.preroll_ad_id).then(ad => {
-            //         if (ad && ad.type === 'video') {
-            //             setAdUrl(ad.url);
-            //         }
-            //     });
-            // }
+        // 1. History & Check List (if logged in)
+        if (user) {
+            addToHistory(user.id, video.id);
+            checkInWatchLater(user.id, video.id).then(setInMyList);
+        }
+
+        // 2. Load ads for non-premium users (no ads on YouTube links)
+        const isYouTube = video.video_url &&
+            (video.video_url.includes('youtube.com') || video.video_url.includes('youtu.be'));
+
+        if (tier !== 'premium' && video.ads_enabled && !isYouTube) {
+            // Inner async IIFE so we can use await inside a sync useEffect
+            (async () => {
+                // --- Pre-roll: pick one at random from up to 2 slots ---
+                const prerollIds = [video.preroll_ad_id, video.preroll_ad_id_2].filter(Boolean) as string[];
+                const pickedPrerollId = prerollIds.length
+                    ? prerollIds[Math.floor(Math.random() * prerollIds.length)]
+                    : null;
+
+                // --- Banner: pick one at random from up to 2 slots ---
+                const bannerIds = [video.banner_ad_id_1, video.banner_ad_id_2].filter(Boolean) as string[];
+                const pickedBannerId = bannerIds.length
+                    ? bannerIds[Math.floor(Math.random() * bannerIds.length)]
+                    : null;
+
+                // Fetch both concurrently
+                const [prerollAd, bannerAd] = await Promise.all([
+                    pickedPrerollId ? getAdById(pickedPrerollId) : Promise.resolve(null),
+                    pickedBannerId ? getAdById(pickedBannerId) : Promise.resolve(null),
+                ]);
+
+                setAdUrl(prerollAd && prerollAd.type === 'video' ? prerollAd.url : null);
+                setBannerAdUrl(bannerAd && bannerAd.type === 'banner' ? bannerAd.url : null);
+            })();
+        } else {
+            setAdUrl(null);
+            setBannerAdUrl(null);
         }
     }, [video, tier, user]);
+
 
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
 
@@ -441,6 +568,8 @@ export default function WatchPage() {
                     <CustomVideoPlayer
                         videoSrc={video.video_url}
                         poster={video.thumbnail_url}
+                        preRollAdSrc={adUrl}
+                        bannerAdSrc={bannerAdUrl}
                     />
                 </section>
 
