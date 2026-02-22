@@ -316,25 +316,48 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                         pointerEvents: showControls ? 'auto' : 'none',
                     }}
                 >
-                    {/* Large centre play/pause button */}
-                    <button
-                        onPointerDown={e => togglePlay(e)}
-                        style={{
-                            position: 'absolute', top: '50%', left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            background: 'rgba(0,0,0,0.55)',
-                            border: '2px solid rgba(255,255,255,0.4)',
-                            color: 'white', borderRadius: '50%',
-                            width: 64, height: 64,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 26, cursor: 'pointer',
-                            backdropFilter: 'blur(4px)',
-                            transition: 'background 0.15s',
-                        }}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                    {/* ── Centre controls: rewind / play / fast-forward ── */}
+                    <div
+                        className="center-controls"
+                        onClick={e => e.stopPropagation()}
+                        onTouchEnd={e => e.stopPropagation()}
                     >
-                        {isPlaying ? '❚❚' : '▶'}
-                    </button>
+                        {/* -10s rewind */}
+                        <button
+                            className="seek-btn"
+                            onPointerDown={e => {
+                                e.stopPropagation();
+                                if (videoRef.current) videoRef.current.currentTime -= 10;
+                            }}
+                            aria-label="Rewind 10 seconds"
+                        >
+                            <span style={{ fontSize: 11, display: 'block', lineHeight: 1 }}>-10s</span>
+                            <span style={{ fontSize: 20 }}>↺</span>
+                        </button>
+
+                        {/* Play / Pause */}
+                        <button
+                            className="seek-btn"
+                            onPointerDown={e => togglePlay(e)}
+                            style={{ width: 68, height: 68, fontSize: 28 }}
+                            aria-label={isPlaying ? 'Pause' : 'Play'}
+                        >
+                            {isPlaying ? '❚❚' : '▶'}
+                        </button>
+
+                        {/* +10s fast-forward */}
+                        <button
+                            className="seek-btn"
+                            onPointerDown={e => {
+                                e.stopPropagation();
+                                if (videoRef.current) videoRef.current.currentTime += 10;
+                            }}
+                            aria-label="Fast-forward 10 seconds"
+                        >
+                            <span style={{ fontSize: 11, display: 'block', lineHeight: 1 }}>+10s</span>
+                            <span style={{ fontSize: 20 }}>↻</span>
+                        </button>
+                    </div>
 
                     {/* Bottom gradient bar */}
                     <div style={{
@@ -455,6 +478,46 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                 }
                 @media (max-width: 768px) {
                     .custom-controls { padding: 0 !important; }
+                }
+
+                /* ── Center controls row ── */
+                .center-controls {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    display: flex;
+                    align-items: center;
+                    gap: 40px;
+                    z-index: 2;
+                }
+
+                /* ── Seek / play buttons ── */
+                .seek-btn {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 50%;
+                    background: rgba(0, 0, 0, 0.55);
+                    border: 2px solid rgba(255, 255, 255, 0.35);
+                    color: white;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 1px;
+                    cursor: pointer;
+                    backdrop-filter: blur(4px);
+                    -webkit-backdrop-filter: blur(4px);
+                    transition: background 0.15s, transform 0.1s;
+                    -webkit-tap-highlight-color: transparent;
+                }
+                .seek-btn:hover {
+                    background: rgba(214, 0, 116, 0.45);
+                    border-color: rgba(214, 0, 116, 0.7);
+                }
+                .seek-btn:active {
+                    transform: scale(0.92);
+                    background: rgba(214, 0, 116, 0.65);
                 }
             `}</style>
         </div>
