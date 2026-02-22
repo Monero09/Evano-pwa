@@ -95,7 +95,8 @@ export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
             video_url: videoUrl,
             thumbnail_url: thumbnailUrl,
             status: 'pending',
-            created_by: userId,
+            uploader_id: userId,   // satisfies the NOT NULL constraint
+            created_by: userId,    // kept for backward compatibility
             view_count: 0,
             ads_enabled: true
         })
