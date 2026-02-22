@@ -216,8 +216,9 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                 cursor: 'pointer',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
-                // Kill the blue tap-highlight flash on iOS / Android Chrome
                 WebkitTapHighlightColor: 'transparent',
+                // Stay BELOW the navbar (z-index: 1000) so the sidebar is always clickable
+                zIndex: 10,
             } as React.CSSProperties}
         >
             {/* 16:9 wrapper */}
@@ -309,7 +310,9 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                         justifyContent: 'flex-end',
                         opacity: showControls ? 1 : 0,
                         transition: 'opacity 0.25s ease',
-                        zIndex: 2147483647,
+                        // In fullscreen: use INT_MAX so Chrome Android never hides controls behind video.
+                        // Outside fullscreen: use 10 to stay below the navbar (z-index 1000).
+                        zIndex: document.fullscreenElement ? 2147483647 : 10,
                         pointerEvents: showControls ? 'auto' : 'none',
                     }}
                 >
@@ -556,20 +559,6 @@ export default function WatchPage() {
     return (
         <>
             <main className="watch-root">
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate('/')}
-                    className="nav-icon-btn"
-                    style={{
-                        position: 'absolute',
-                        top: 20,
-                        left: 20,
-                        zIndex: 100
-                    }}
-                >
-                    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </button>
-
                 {/* Video Player Section */}
                 <section className="watch-hero">
                     <CustomVideoPlayer
