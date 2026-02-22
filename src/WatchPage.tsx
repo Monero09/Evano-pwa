@@ -30,11 +30,8 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     const [currentSrc, setCurrentSrc] = useState(preRollAdSrc || videoSrc);
     const [isShowingAd, setIsShowingAd] = useState(!!preRollAdSrc);
 
-    // Double-tap seek flash: '+10s' | '-10s' | null
-    const [seekFlash, setSeekFlash] = useState<string | null>(null);
-
     const hideTimerRef = useRef<number | null>(null);
-    const lastTapRef = useRef<number>(0);
+
 
     // ── Prop-change reset ─────────────────────────────────────────────
     useEffect(() => {
@@ -121,49 +118,13 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
         revealControls();
     };
 
-    // ── Seek flash helper ─────────────────────────────────────────────
-    const flashSeek = (label: string, delta: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
-        setSeekFlash(label);
-        setTimeout(() => setSeekFlash(null), 700);
-    };
-
-    // ── Tap handler: single = toggle UI, double = ±10s seek ──────────
-    // Uses Date.now() timestamp diff — the only reliable double-tap detector
-    // that works across all mobile browsers without being swallowed by the engine.
+    // ── Tap handler: 1 tap anywhere outside controls = toggle controls ──
     const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
-        // Ignore anything that originated inside the controls overlay
+        // Ignore clicks that land directly on the controls UI
         if ((e.target as HTMLElement).closest('.custom-controls')) return;
 
-        // Get clientX from touch OR mouse event
-        const clientX =
-            'changedTouches' in e
-                ? e.changedTouches[0].clientX
-                : (e as React.MouseEvent).clientX;
-
-        const now = Date.now();
-        const DOUBLE_TAP_DELAY = 300;
-
-        if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-            // ── DOUBLE TAP ────────────────────────────────────────────
-            const screenWidth = window.innerWidth;
-            if (clientX < screenWidth / 3) {
-                flashSeek('-10s', -10);
-            } else if (clientX > (screenWidth * 2) / 3) {
-                flashSeek('+10s', +10);
-            }
-            // Reset so a rapid third tap doesn't re-trigger
-            lastTapRef.current = 0;
-        } else {
-            // ── SINGLE TAP ────────────────────────────────────────────
-            lastTapRef.current = now;
-            setShowControls(prev => {
-                if (!prev) scheduleHide.current();
-                return !prev;
-            });
-        }
+        // Simply toggle the controls on/off
+        setShowControls(prev => !prev);
     };
 
     // ── Progress bar: mouse click ─────────────────────────────────────
@@ -292,23 +253,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                         textTransform: 'uppercase',
                     }}>
                         Ad playing…
-                    </div>
-                )}
-
-                {/* ── Double-tap seek flash ── */}
-                {seekFlash && (
-                    <div style={{
-                        position: 'absolute', top: '50%',
-                        left: seekFlash.startsWith('-') ? '15%' : '85%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: 20, fontWeight: 700, color: 'white',
-                        background: 'rgba(0,0,0,0.6)',
-                        padding: '8px 14px', borderRadius: 24,
-                        animation: 'seekFade 0.7s ease-out forwards',
-                        pointerEvents: 'none', zIndex: 40,
-                        whiteSpace: 'nowrap',
-                    }}>
-                        {seekFlash}
                     </div>
                 )}
 
