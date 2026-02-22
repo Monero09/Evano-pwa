@@ -210,8 +210,8 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                     (video as any).webkitEnterFullscreen();
                 }
                 // Force landscape on Chrome Android / Firefox Android
-                if (window.screen?.orientation?.lock) {
-                    await (window.screen.orientation as any).lock('landscape').catch(() => { });
+                if (window.screen && screen.orientation && (screen.orientation as any).lock) {
+                    await (screen.orientation as any).lock('landscape').catch(() => { });
                 }
             } else {
                 if (document.exitFullscreen) {
@@ -220,8 +220,8 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                     (document as any).webkitExitFullscreen();
                 }
                 // Release orientation lock
-                if (window.screen?.orientation?.unlock) {
-                    window.screen.orientation.unlock();
+                if (window.screen && screen.orientation && (screen.orientation as any).unlock) {
+                    (screen.orientation as any).unlock();
                 }
             }
         } catch (err) {
