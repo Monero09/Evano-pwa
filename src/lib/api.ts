@@ -61,20 +61,44 @@ export async function fetchVideos(): Promise<Video[]> {
 
 // --- 2. UPLOAD VIDEO (CREATOR) ---
 export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
-    const timestamp = Date.now();
     const { title, description, category, videoFile, thumbnailFile } = uploadData;
 
-    // A. Upload Thumbnail
-    const thumbPath = `${userId}/${timestamp}_thumb_${thumbnailFile.name.replace(/\s+/g, '_')}`;
-    const thumbnailUrl = await uploadFileToStorage('thumbnails', thumbPath, thumbnailFile);
-    if (!thumbnailUrl) throw new Error("Failed to upload thumbnail");
+    // A. Upload Thumbnail (using helper — bucket: 'thumbnails')
+    const thumbExt = thumbnailFile.name.split('.').pop();
+    const thumbName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${thumbExt}`;
+    const thumbPath = `${userId}/${thumbName}`;
 
-    // B. Upload Video
-    const videoPath = `${userId}/${timestamp}_vid_${videoFile.name.replace(/\s+/g, '_')}`;
-    const videoUrl = await uploadFileToStorage('videos', videoPath, videoFile);
-    if (!videoUrl) throw new Error("Failed to upload video");
+    const { error: thumbError } = await supabase.storage
+        .from('thumbnails')
+        .upload(thumbPath, thumbnailFile, { cacheControl: '3600', upsert: true });
 
-    // C. Get category_id from category name by querying the database
+    if (thumbError) throw new Error(`Failed to upload thumbnail: ${thumbError.message}`);
+
+    const { data: thumbUrlData } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(thumbPath);
+
+    const thumbnailUrl = thumbUrlData.publicUrl;
+
+    // B. Upload Video — hardcoded bucket: 'videos'
+    const fileExt = videoFile.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('videos')
+        .upload(filePath, videoFile, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) throw new Error(`Failed to upload video: ${uploadError.message}`);
+
+    // C. Generate the full public URL
+    const { data: publicUrlData } = supabase.storage
+        .from('videos')
+        .getPublicUrl(filePath);
+
+    const finalVideoUrl = publicUrlData.publicUrl;
+
+    // D. Get category_id from category name
     const { data: categoryData, error: categoryError } = await supabase
         .from('categories')
         .select('id')
@@ -85,18 +109,18 @@ export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
         throw new Error(`Category "${category}" not found in database`);
     }
 
-    // D. Insert Metadata
+    // E. Insert Metadata
     const { data, error } = await supabase
         .from('videos')
         .insert({
             title,
             description,
             category_id: categoryData.id,
-            video_url: videoUrl,
+            video_url: finalVideoUrl,  // full public URL from getPublicUrl()
             thumbnail_url: thumbnailUrl,
-            status: 'pending',
-            uploader_id: userId,   // satisfies the NOT NULL constraint
-            created_by: userId,    // kept for backward compatibility
+            status: 'approved',     // set to 'pending' to require admin approval
+            uploader_id: userId,         // NOT NULL — required
+            created_by: userId,         // backward compat
             view_count: 0,
             ads_enabled: true
         })
