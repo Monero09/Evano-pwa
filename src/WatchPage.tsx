@@ -34,7 +34,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     const [seekFlash, setSeekFlash] = useState<string | null>(null);
 
     const hideTimerRef = useRef<number | null>(null);
-    const tapTimerRef = useRef<number | null>(null);
     const lastTapRef = useRef<number>(0);
 
     // ── Prop-change reset ─────────────────────────────────────────────
@@ -132,36 +131,38 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     };
 
     // ── Tap handler: single = toggle UI, double = ±10s seek ──────────
-    const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Ignore clicks that originated inside the controls bar
+    // Uses Date.now() timestamp diff — the only reliable double-tap detector
+    // that works across all mobile browsers without being swallowed by the engine.
+    const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
+        // Ignore anything that originated inside the controls overlay
         if ((e.target as HTMLElement).closest('.custom-controls')) return;
 
-        const now = Date.now();
-        const container = containerRef.current;
+        // Get clientX from touch OR mouse event
+        const clientX =
+            'changedTouches' in e
+                ? e.changedTouches[0].clientX
+                : (e as React.MouseEvent).clientX;
 
-        if (now - lastTapRef.current < 300 && tapTimerRef.current !== null) {
-            // ── Double tap ────────────────────────────────────────────
-            window.clearTimeout(tapTimerRef.current);
-            tapTimerRef.current = null;
-            lastTapRef.current = 0;
-            if (container) {
-                const { left, width } = container.getBoundingClientRect();
-                const relX = (e.clientX - left) / width;
-                if (relX < 0.3) flashSeek('-10s', -10);
-                else if (relX > 0.7) flashSeek('+10s', +10);
-                // middle third → no seek action
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+
+        if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+            // ── DOUBLE TAP ────────────────────────────────────────────
+            const screenWidth = window.innerWidth;
+            if (clientX < screenWidth / 3) {
+                flashSeek('-10s', -10);
+            } else if (clientX > (screenWidth * 2) / 3) {
+                flashSeek('+10s', +10);
             }
+            // Reset so a rapid third tap doesn't re-trigger
+            lastTapRef.current = 0;
         } else {
-            // ── Single tap (wait to see if a second follows) ──────────
+            // ── SINGLE TAP ────────────────────────────────────────────
             lastTapRef.current = now;
-            tapTimerRef.current = window.setTimeout(() => {
-                tapTimerRef.current = null;
-                // Toggle controls visibility; restart hide timer when revealing
-                setShowControls(prev => {
-                    if (!prev) scheduleHide.current(); // revealing → start timer
-                    return !prev;
-                });
-            }, 300);
+            setShowControls(prev => {
+                if (!prev) scheduleHide.current();
+                return !prev;
+            });
         }
     };
 
@@ -241,7 +242,8 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
         <div
             ref={containerRef}
             className="custom-player-container"
-            onClick={handleContainerClick}
+            onClick={handleScreenTap}
+            onTouchEnd={handleScreenTap}
             style={{
                 position: 'relative',
                 width: '100%',
@@ -251,9 +253,10 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                 overflow: 'hidden',
                 backgroundColor: '#000',
                 cursor: 'pointer',
-                // Prevent iOS long-press selection
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
+                // Kill the blue tap-highlight flash on iOS / Android Chrome
+                WebkitTapHighlightColor: 'transparent',
             } as React.CSSProperties}
         >
             {/* 16:9 wrapper */}
@@ -322,6 +325,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                     }}>
                         <button
                             onClick={e => { e.stopPropagation(); setShowBannerAd(false); }}
+                            onTouchEnd={e => { e.stopPropagation(); setShowBannerAd(false); }}
                             style={{
                                 position: 'absolute', top: 5, right: 5,
                                 background: 'rgba(0,0,0,0.7)', border: 'none',
