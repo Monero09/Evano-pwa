@@ -21,148 +21,197 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     const progressBarRef = useRef<HTMLDivElement | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
-    const [showPlayIcon, setShowPlayIcon] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
     const [showBannerAd, setShowBannerAd] = useState(false);
 
+    // Ad state
     const [currentSrc, setCurrentSrc] = useState(preRollAdSrc || videoSrc);
     const [isShowingAd, setIsShowingAd] = useState(!!preRollAdSrc);
 
-    const hideTimerRef = useRef<number | null>(null);
+    // Double-tap seek flash: '+10s' | '-10s' | null
+    const [seekFlash, setSeekFlash] = useState<string | null>(null);
 
-    // Reset src and ad state when the video or ad source changes (e.g. navigating to a new video)
+    const hideTimerRef = useRef<number | null>(null);
+    const tapTimerRef = useRef<number | null>(null);
+    const lastTapRef = useRef<number>(0);
+
+    // ── Prop-change reset ─────────────────────────────────────────────
     useEffect(() => {
         setCurrentSrc(preRollAdSrc || videoSrc);
         setIsShowingAd(!!preRollAdSrc);
+        setShowBannerAd(false);
     }, [videoSrc, preRollAdSrc]);
 
-    // Handler: when the current video segment ends
+    // ── Ad-end handler ────────────────────────────────────────────────
     const handleVideoEnded = () => {
         if (isShowingAd) {
-            // Ad finished — switch to the real video and autoplay
             setCurrentSrc(videoSrc);
             setIsShowingAd(false);
-            // Small timeout ensures the src swap is committed before play()
-            setTimeout(() => {
-                videoRef.current?.play();
-            }, 50);
+            setTimeout(() => { videoRef.current?.play(); }, 50);
         }
     };
 
-    // Auto-hide controls
-    useEffect(() => {
-        const resetHide = () => {
-            setShowControls(true);
-            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-            hideTimerRef.current = window.setTimeout(() => {
-                if (isPlaying) setShowControls(false);
-            }, 3000);
-        };
+    // ── Auto-hide controls ────────────────────────────────────────────
+    // Use a stable ref so event-listener callbacks always see the latest version
+    const scheduleHide = useRef<() => void>(() => { });
+    scheduleHide.current = () => {
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = window.setTimeout(() => {
+            if (videoRef.current && !videoRef.current.paused) {
+                setShowControls(false);
+            }
+        }, 3000);
+    };
 
+    const revealControls = () => {
+        setShowControls(true);
+        scheduleHide.current();
+    };
+
+    useEffect(() => {
         const node = containerRef.current;
-        node?.addEventListener('mousemove', resetHide);
-        node?.addEventListener('touchstart', resetHide);
-
-        resetHide();
+        const onMove = () => revealControls();
+        const onTouch = () => revealControls();
+        node?.addEventListener('mousemove', onMove);
+        node?.addEventListener('touchstart', onTouch, { passive: true });
+        scheduleHide.current();
         return () => {
-            node?.removeEventListener('mousemove', resetHide);
-            node?.removeEventListener('touchstart', resetHide);
+            node?.removeEventListener('mousemove', onMove);
+            node?.removeEventListener('touchstart', onTouch);
             if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
         };
-    }, [isPlaying]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    // Show banner ad image 5 seconds after main video starts (not during pre-roll, not for YouTube)
+    // ── Banner-ad timer ───────────────────────────────────────────────
     useEffect(() => {
-        // Only show when main video is playing (not during ad)
-        if (!isPlaying || isShowingAd) return;
-
-        // Skip if no banner ad or if it's a YouTube video
-        if (!bannerAdSrc) return;
-        if (videoSrc && (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be'))) return;
-
-        const timer = setTimeout(() => {
-            setShowBannerAd(true);
-        }, 5000);
-
-        return () => clearTimeout(timer);
+        if (!isPlaying || isShowingAd || !bannerAdSrc) return;
+        if (videoSrc?.includes('youtube.com') || videoSrc?.includes('youtu.be')) return;
+        const t = setTimeout(() => setShowBannerAd(true), 5000);
+        return () => clearTimeout(t);
     }, [isPlaying, isShowingAd, bannerAdSrc, videoSrc]);
 
-    // Update time and duration
+    // ── Video native event listeners ──────────────────────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-
-        const handleTimeUpdate = () => {
-            setCurrentTime(video.currentTime);
-        };
-
-        const handleLoadedMetadata = () => {
-            setDuration(video.duration);
-        };
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-
-        video.addEventListener('timeupdate', handleTimeUpdate);
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-
+        const onTime = () => setCurrentTime(video.currentTime);
+        const onMeta = () => setDuration(isNaN(video.duration) ? 0 : video.duration);
+        const onPlay = () => { setIsPlaying(true); scheduleHide.current(); };
+        const onPause = () => { setIsPlaying(false); setShowControls(true); };
+        video.addEventListener('timeupdate', onTime);
+        video.addEventListener('loadedmetadata', onMeta);
+        video.addEventListener('play', onPlay);
+        video.addEventListener('pause', onPause);
         return () => {
-            video.removeEventListener('timeupdate', handleTimeUpdate);
-            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
+            video.removeEventListener('timeupdate', onTime);
+            video.removeEventListener('loadedmetadata', onMeta);
+            video.removeEventListener('play', onPlay);
+            video.removeEventListener('pause', onPause);
         };
     }, []);
 
-    // Click-to-pause functionality
-    const handleVideoClick = () => {
+    // ── Play / Pause (explicit button only) ───────────────────────────
+    const togglePlay = (e: React.SyntheticEvent) => {
+        e.stopPropagation();
         const video = videoRef.current;
         if (!video) return;
-
-        if (video.paused) {
-            video.play();
-            setIsPlaying(true);
-        } else {
-            video.pause();
-            setIsPlaying(false);
-        }
-
-        // Show play/pause icon animation
-        setShowPlayIcon(true);
-        setTimeout(() => setShowPlayIcon(false), 600);
+        if (video.paused) { video.play(); } else { video.pause(); }
+        revealControls();
     };
 
-    const togglePlay = () => {
-        handleVideoClick();
-    };
-
-    const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    // ── Seek flash helper ─────────────────────────────────────────────
+    const flashSeek = (label: string, delta: number) => {
         const video = videoRef.current;
-        const progressBar = progressBarRef.current;
-        if (!video || !progressBar) return;
-
-        const rect = progressBar.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        video.currentTime = pos * video.duration;
+        if (!video) return;
+        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
+        setSeekFlash(label);
+        setTimeout(() => setSeekFlash(null), 700);
     };
 
+    // ── Tap handler: single = toggle UI, double = ±10s seek ──────────
+    const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Ignore clicks that originated inside the controls bar
+        if ((e.target as HTMLElement).closest('.custom-controls')) return;
+
+        const now = Date.now();
+        const container = containerRef.current;
+
+        if (now - lastTapRef.current < 300 && tapTimerRef.current !== null) {
+            // ── Double tap ────────────────────────────────────────────
+            window.clearTimeout(tapTimerRef.current);
+            tapTimerRef.current = null;
+            lastTapRef.current = 0;
+            if (container) {
+                const { left, width } = container.getBoundingClientRect();
+                const relX = (e.clientX - left) / width;
+                if (relX < 0.3) flashSeek('-10s', -10);
+                else if (relX > 0.7) flashSeek('+10s', +10);
+                // middle third → no seek action
+            }
+        } else {
+            // ── Single tap (wait to see if a second follows) ──────────
+            lastTapRef.current = now;
+            tapTimerRef.current = window.setTimeout(() => {
+                tapTimerRef.current = null;
+                // Toggle controls visibility; restart hide timer when revealing
+                setShowControls(prev => {
+                    if (!prev) scheduleHide.current(); // revealing → start timer
+                    return !prev;
+                });
+            }, 300);
+        }
+    };
+
+    // ── Progress bar: mouse click ─────────────────────────────────────
+    const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        const video = videoRef.current;
+        const bar = progressBarRef.current;
+        if (!video || !bar) return;
+        const { left, width } = bar.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.clientX - left) / width));
+        video.currentTime = pos * (video.duration || 0);
+    };
+
+    // ── Progress bar: touch drag ──────────────────────────────────────
+    const handleProgressTouch = (e: React.TouchEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        const video = videoRef.current;
+        const bar = progressBarRef.current;
+        if (!video || !bar || !e.touches[0]) return;
+        const { left, width } = bar.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.touches[0].clientX - left) / width));
+        video.currentTime = pos * (video.duration || 0);
+    };
+
+    // ── Fullscreen + landscape lock ───────────────────────────────────
     const toggleFullscreen = async () => {
         const container = containerRef.current;
         const video = videoRef.current;
         if (!container || !video) return;
 
+        const isFs = !!(
+            document.fullscreenElement ||
+            (document as any).webkitFullscreenElement
+        );
+
         try {
-            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+            if (!isFs) {
+                // Always enter fullscreen on the CONTAINER so custom controls are inside
                 if (container.requestFullscreen) {
                     await container.requestFullscreen();
                 } else if ((container as any).webkitRequestFullscreen) {
                     (container as any).webkitRequestFullscreen();
                 } else if ((video as any).webkitEnterFullscreen) {
-                    (video as any).webkitEnterFullscreen(); // Critical for iOS Safari
+                    // iOS Safari last resort
+                    (video as any).webkitEnterFullscreen();
+                }
+                // Force landscape on Chrome Android / Firefox Android
+                if (window.screen?.orientation?.lock) {
+                    await (window.screen.orientation as any).lock('landscape').catch(() => { });
                 }
             } else {
                 if (document.exitFullscreen) {
@@ -170,22 +219,29 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                 } else if ((document as any).webkitExitFullscreen) {
                     (document as any).webkitExitFullscreen();
                 }
+                // Release orientation lock
+                if (window.screen?.orientation?.unlock) {
+                    window.screen.orientation.unlock();
+                }
             }
-        } catch (e) {
-            console.error("Fullscreen error:", e);
+        } catch (err) {
+            console.error('Fullscreen error:', err);
         }
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    // ── Helpers ───────────────────────────────────────────────────────
+    const fmt = (s: number) => {
+        const m = Math.floor(s / 60);
+        return `${m}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
     };
+    const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+    // ── Render ────────────────────────────────────────────────────────
     return (
         <div
             ref={containerRef}
             className="custom-player-container"
+            onClick={handleContainerClick}
             style={{
                 position: 'relative',
                 width: '100%',
@@ -193,257 +249,261 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
                 margin: '0 auto',
                 borderRadius: '10px',
                 overflow: 'hidden',
-                backgroundColor: '#000'
-            }}
+                backgroundColor: '#000',
+                cursor: 'pointer',
+                // Prevent iOS long-press selection
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+            } as React.CSSProperties}
         >
-            {/* Video Element */}
-            <div
-                onClick={handleVideoClick}
-                style={{
-                    position: 'relative',
-                    paddingTop: '56.25%', // 16:9 aspect ratio
-                    cursor: 'pointer',
-                    backgroundColor: '#000'
-                }}
-            >
-                {/* "Ad playing" overlay */}
-                {isShowingAd && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 12,
-                            right: 12,
-                            background: 'rgba(0,0,0,0.65)',
-                            color: 'rgba(255,255,255,0.85)',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            letterSpacing: '0.05em',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            backdropFilter: 'blur(6px)',
-                            border: '1px solid rgba(214,0,116,0.4)',
-                            zIndex: 20,
-                            pointerEvents: 'none',
-                            textTransform: 'uppercase'
-                        }}
-                    >
-                        Ad playing…
-                    </div>
-                )}
+            {/* 16:9 wrapper */}
+            <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000' }}>
 
+                {/* ── <video> — pointer-events:none, container handles all input ── */}
                 <video
                     ref={videoRef}
                     src={currentSrc}
                     poster={isShowingAd ? undefined : poster}
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain'
-                    }}
                     playsInline
                     onEnded={handleVideoEnded}
+                    style={{
+                        position: 'absolute', top: 0, left: 0,
+                        width: '100%', height: '100%',
+                        objectFit: 'contain',
+                        pointerEvents: 'none', // ← critical: hands all events to container
+                    }}
                 />
 
-                {/* Center Play/Pause Icon Animation */}
-                {showPlayIcon && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            fontSize: '80px',
-                            color: 'white',
-                            opacity: 0.9,
-                            animation: 'fadeOut 0.6s ease-out',
-                            pointerEvents: 'none',
-                            zIndex: 10
-                        }}
-                    >
-                        {isPlaying ? '▶' : '❚❚'}
+                {/* ── "Ad playing" badge ── */}
+                {isShowingAd && (
+                    <div style={{
+                        position: 'absolute', top: 12, right: 12,
+                        background: 'rgba(0,0,0,0.65)',
+                        color: 'rgba(255,255,255,0.85)',
+                        fontSize: 11, fontWeight: 600,
+                        letterSpacing: '0.05em',
+                        padding: '4px 10px', borderRadius: 4,
+                        backdropFilter: 'blur(6px)',
+                        border: '1px solid rgba(214,0,116,0.4)',
+                        zIndex: 30, pointerEvents: 'none',
+                        textTransform: 'uppercase',
+                    }}>
+                        Ad playing…
                     </div>
                 )}
 
-                {/* Banner Image Ad (Lower Third) */}
+                {/* ── Double-tap seek flash ── */}
+                {seekFlash && (
+                    <div style={{
+                        position: 'absolute', top: '50%',
+                        left: seekFlash.startsWith('-') ? '15%' : '85%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: 20, fontWeight: 700, color: 'white',
+                        background: 'rgba(0,0,0,0.6)',
+                        padding: '8px 14px', borderRadius: 24,
+                        animation: 'seekFade 0.7s ease-out forwards',
+                        pointerEvents: 'none', zIndex: 40,
+                        whiteSpace: 'nowrap',
+                    }}>
+                        {seekFlash}
+                    </div>
+                )}
+
+                {/* ── Banner image ad (lower-third) ── */}
                 {showBannerAd && bannerAdSrc && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '80px',
-                            left: '20px',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            maxWidth: '340px',
-                            animation: 'slideInLeft 0.5s ease-out',
-                            zIndex: 5,
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-                            border: '1px solid rgba(214,0,116,0.35)'
-                        }}
-                    >
-                        {/* Close button */}
+                    <div style={{
+                        position: 'absolute', bottom: 80, left: 16,
+                        borderRadius: 8, overflow: 'hidden',
+                        maxWidth: 300,
+                        animation: 'slideInLeft 0.5s ease-out',
+                        zIndex: 20,
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+                        border: '1px solid rgba(214,0,116,0.35)',
+                    }}>
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowBannerAd(false);
-                            }}
+                            onClick={e => { e.stopPropagation(); setShowBannerAd(false); }}
                             style={{
-                                position: 'absolute',
-                                top: '6px',
-                                right: '6px',
-                                background: 'rgba(0,0,0,0.65)',
-                                border: 'none',
-                                color: 'white',
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '50%',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 6
+                                position: 'absolute', top: 5, right: 5,
+                                background: 'rgba(0,0,0,0.7)', border: 'none',
+                                color: 'white', width: 22, height: 22,
+                                borderRadius: '50%', cursor: 'pointer',
+                                fontSize: 13, display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                zIndex: 21,
                             }}
-                        >
-                            ×
-                        </button>
-                        {/* Sponsored label */}
+                        >×</button>
                         <div style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            background: 'rgba(0,0,0,0.55)',
-                            fontSize: '9px',
-                            color: 'rgba(255,255,255,0.7)',
-                            padding: '3px 8px',
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            pointerEvents: 'none'
-                        }}>
-                            Sponsored
-                        </div>
+                            position: 'absolute', bottom: 0, left: 0, right: 0,
+                            background: 'rgba(0,0,0,0.55)', fontSize: 9,
+                            color: 'rgba(255,255,255,0.7)', padding: '3px 8px',
+                            letterSpacing: '0.08em', textTransform: 'uppercase',
+                            pointerEvents: 'none',
+                        }}>Sponsored</div>
                         <img
-                            src={bannerAdSrc}
-                            alt="Advertisement"
-                            style={{ display: 'block', width: '100%', maxHeight: '140px', objectFit: 'cover' }}
-                            draggable={false}
+                            src={bannerAdSrc} alt="Advertisement" draggable={false}
+                            style={{ display: 'block', width: '100%', maxHeight: 130, objectFit: 'cover' }}
                         />
                     </div>
                 )}
 
-                {/* Custom Controls */}
+                {/* ═══════════════════════════════════════════════════════════
+                    CONTROLS OVERLAY
+                    z-index: 2147483647 = INT_MAX → Chrome Android fullscreen
+                    will NEVER push our controls behind the video layer.
+                    pointerEvents toggles so background tap-to-toggle still works.
+                ═══════════════════════════════════════════════════════════ */}
                 <div
                     className={`custom-controls ${showControls ? 'visible' : 'hidden'}`}
+                    onClick={e => e.stopPropagation()}
                     style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.8))',
-                        padding: '15px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px',
+                        position: 'absolute', inset: 0,
+                        display: 'flex', flexDirection: 'column',
+                        justifyContent: 'flex-end',
                         opacity: showControls ? 1 : 0,
-                        transition: 'opacity 0.3s ease',
-                        zIndex: 4
+                        transition: 'opacity 0.25s ease',
+                        zIndex: 2147483647,
+                        pointerEvents: showControls ? 'auto' : 'none',
                     }}
-                    onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Progress Bar */}
-                    <div
-                        ref={progressBarRef}
-                        onClick={handleSeek}
+                    {/* Large centre play/pause button */}
+                    <button
+                        onPointerDown={e => togglePlay(e)}
                         style={{
-                            width: '100%',
-                            height: '6px',
-                            backgroundColor: 'rgba(255,255,255,0.3)',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            position: 'relative'
+                            position: 'absolute', top: '50%', left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(0,0,0,0.55)',
+                            border: '2px solid rgba(255,255,255,0.4)',
+                            color: 'white', borderRadius: '50%',
+                            width: 64, height: 64,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 26, cursor: 'pointer',
+                            backdropFilter: 'blur(4px)',
+                            transition: 'background 0.15s',
                         }}
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
-                        <div
-                            style={{
-                                width: `${(currentTime / duration) * 100}%`,
-                                height: '100%',
-                                background: 'linear-gradient(90deg, #D60074, #db2777)',
-                                borderRadius: '3px',
-                                transition: 'width 0.1s linear'
-                            }}
-                        />
-                    </div>
+                        {isPlaying ? '❚❚' : '▶'}
+                    </button>
 
-                    {/* Control Buttons */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <button
-                                onClick={togglePlay}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'white',
-                                    fontSize: '24px',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {isPlaying ? '❚❚' : '▶'}
-                            </button>
-                            <div style={{ color: 'white', fontSize: '14px', fontFamily: 'monospace' }}>
-                                {formatTime(currentTime)} / {formatTime(duration)}
+                    {/* Bottom gradient bar */}
+                    <div style={{
+                        background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.88))',
+                        padding: '10px 14px 12px',
+                        display: 'flex', flexDirection: 'column', gap: 8,
+                    }}>
+
+                        {/* ── Progress bar with large touch target ── */}
+                        <div
+                            ref={progressBarRef}
+                            onClick={handleSeekClick}
+                            onTouchStart={handleProgressTouch}
+                            onTouchMove={handleProgressTouch}
+                            style={{
+                                width: '100%', height: 20, // tall touch target
+                                display: 'flex', alignItems: 'center',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            <div style={{
+                                position: 'relative',
+                                width: '100%', height: 5,
+                                background: 'rgba(255,255,255,0.28)',
+                                borderRadius: 3,
+                            }}>
+                                {/* Filled portion */}
+                                <div style={{
+                                    width: `${pct}%`, height: '100%',
+                                    background: 'linear-gradient(90deg, #D60074, #db2777)',
+                                    borderRadius: 3,
+                                    transition: 'width 0.1s linear',
+                                }} />
+                                {/* Scrubber thumb — larger for fat fingers */}
+                                <div style={{
+                                    position: 'absolute', top: '50%',
+                                    left: `${pct}%`,
+                                    transform: 'translate(-50%, -50%)',
+                                    width: 14, height: 14,
+                                    borderRadius: '50%',
+                                    background: '#fff',
+                                    boxShadow: '0 0 5px rgba(0,0,0,0.55)',
+                                }} />
                             </div>
                         </div>
 
-                        <button
-                            onClick={toggleFullscreen}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'white',
-                                fontSize: '20px',
-                                cursor: 'pointer',
-                                padding: 0
-                            }}
-                        >
-                            ⛶
-                        </button>
+                        {/* ── Bottom button row ── */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center',
+                            justifyContent: 'space-between',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                {/* Play/Pause (bottom bar duplicate) */}
+                                <button
+                                    onPointerDown={e => togglePlay(e)}
+                                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                                    style={{
+                                        background: 'transparent', border: 'none',
+                                        color: 'white', fontSize: 22,
+                                        cursor: 'pointer', padding: 0,
+                                        minWidth: 40, minHeight: 40,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
+                                >
+                                    {isPlaying ? '❚❚' : '▶'}
+                                </button>
+
+                                {/* Timestamp */}
+                                <span style={{
+                                    color: 'white', fontSize: 13,
+                                    fontFamily: 'monospace', whiteSpace: 'nowrap',
+                                    userSelect: 'none',
+                                }}>
+                                    {fmt(currentTime)} / {fmt(duration)}
+                                </span>
+                            </div>
+
+                            {/* Fullscreen */}
+                            <button
+                                onPointerDown={e => { e.stopPropagation(); toggleFullscreen(); }}
+                                aria-label="Toggle fullscreen"
+                                style={{
+                                    background: 'transparent', border: 'none',
+                                    color: 'white', fontSize: 20,
+                                    cursor: 'pointer', padding: 0,
+                                    minWidth: 40, minHeight: 40,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                ⛶
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </div>{/* end 16:9 wrapper */}
 
             <style>{`
-                @keyframes fadeOut {
-                    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+                @keyframes seekFade {
+                    0%   { opacity: 1;   transform: translate(-50%, -50%) scale(1);    }
+                    100% { opacity: 0;   transform: translate(-50%, -60%) scale(1.1);  }
                 }
                 @keyframes slideInLeft {
-                    0% { transform: translateX(-100%); opacity: 0; }
-                    100% { transform: translateX(0); opacity: 1; }
+                    0%   { transform: translateX(-110%); opacity: 0; }
+                    100% { transform: translateX(0);     opacity: 1; }
+                }
+                /* Fullscreen: fill the entire screen with the container */
+                .custom-player-container:fullscreen,
+                .custom-player-container:-webkit-full-screen {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    max-width: none !important;
+                    border-radius: 0 !important;
+                }
+                .custom-player-container:fullscreen > div:first-child,
+                .custom-player-container:-webkit-full-screen > div:first-child {
+                    padding-top: 0 !important;
+                    height: 100vh !important;
                 }
                 @media (max-width: 768px) {
-                    .custom-controls {
-                        padding: 10px !important;
-                        gap: 5px !important;
-                    }
-                    .custom-controls button {
-                        font-size: 18px !important;
-                    }
-                    .custom-controls div {
-                        font-size: 12px !important;
-                    }
-                    div[style*="bottom: 80px"] {
-                        bottom: 60px !important;
-                        left: 10px !important;
-                        right: 10px !important;
-                        max-width: none !important;
-                        padding: 10px !important;
-                    }
+                    .custom-controls { padding: 0 !important; }
                 }
             `}</style>
         </div>
@@ -518,7 +578,6 @@ export default function WatchPage() {
             setBannerAdUrl(null);
         }
     }, [video, tier, user]);
-
 
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
 
@@ -636,7 +695,7 @@ export default function WatchPage() {
                                         padding: 8,
                                         opacity: 0,
                                         transition: 'opacity 0.2s ease'
-                                    }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}>
+                                    }} onMouseEnter={e => (e.currentTarget.style.opacity = '1')} onMouseLeave={e => (e.currentTarget.style.opacity = '0')}>
                                         <div style={{ fontSize: 12, fontWeight: 600, color: 'white' }}>{r.title}</div>
                                     </div>
                                 </div>
