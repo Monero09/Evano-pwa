@@ -6,18 +6,6 @@ export type { Ad, Video, VideoUploadData }; // Re-export for compatibility
 // --- CONFIGURATION ---
 // Configuration is now handled in supabase.ts
 
-// --- CONSTANTS ---
-const CATEGORY_MAP: Record<number, string> = {
-    1: 'Movies',
-    2: 'Music',
-    3: 'Tech',
-    4: 'Comedy',
-    5: 'Drama',
-    6: 'Action',
-    7: 'Documentary',
-    8: 'African',
-};
-
 // --- HELPERS ---
 async function uploadFileToStorage(bucket: string, path: string, file: File): Promise<string | null> {
     try {
@@ -70,20 +58,6 @@ export async function fetchVideos(): Promise<Video[]> {
         return [];
     }
 }
-
-// --- Helper: Convert category name to ID ---
-const CATEGORY_NAME_TO_ID: Record<string, number> = {
-    'Movies': 1,
-    'Music': 2,
-    'Tech': 3,
-    'Comedy': 4,
-    'Drama': 5,
-    'Action': 6,
-    'Documentary': 7,
-    'African': 8,
-    'Podcast': 4, // Use Comedy as fallback for Podcast
-    'Skit video': 4, // Use Comedy as fallback for Skit video
-};
 
 // --- 2. UPLOAD VIDEO (CREATOR) ---
 export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
