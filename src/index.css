@@ -764,8 +764,15 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 100;
+  /* Raised: sits above navbar (1000) but below sidebar drawer (1500) and hamburger (2000) */
+  z-index: 1100;
   border-bottom: 1px solid rgba(214, 0, 116, 0.1);
+}
+
+/* Logo inside the SearchPage header — shifted right to clear the
+   fixed hamburger button (position: fixed; left: 20px; ~40px wide) */
+.search-body header .logo {
+  margin-left: 52px;
 }
 
 .logo {
