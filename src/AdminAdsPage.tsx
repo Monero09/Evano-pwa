@@ -250,7 +250,7 @@ export default function AdminAdsPage() {
 
                     <input
                         type="file"
-                        accept={uploadType === 'video' ? 'video/*' : 'image/*'}
+                        accept={uploadType === 'video' ? 'video/*' : 'image/*,video/*'}
                         onChange={(e) => setAdFile(e.target.files?.[0] || null)}
                         className="auth-input"
                         required
@@ -279,6 +279,8 @@ export default function AdminAdsPage() {
                             {/* Media preview */}
                             {ad.type === 'video' ? (
                                 <video src={ad.url} controls style={{ width: '100%', borderRadius: 8, maxHeight: 160, objectFit: 'cover' }} />
+                            ) : /\.(mp4|webm|mov|ogg)(\?|$)/i.test(ad.url) ? (
+                                <video src={ad.url} autoPlay muted loop playsInline style={{ width: '100%', borderRadius: 8, maxHeight: 160, objectFit: 'cover' }} />
                             ) : (
                                 <img src={ad.url} alt={ad.title} style={{ width: '100%', borderRadius: 8, maxHeight: 160, objectFit: 'cover' }} />
                             )}

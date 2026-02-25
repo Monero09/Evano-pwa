@@ -3,6 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 
 const ROTATE_MS = 7000;
 
+/** True if the URL points to a video file (mp4, webm, mov, ogg) */
+function isVideoUrl(url: string): boolean {
+    return /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
+}
+
 interface Props {
     /** Already-fetched banner ads from the parent (avoids double fetch) */
     ads: Ad[];
@@ -41,23 +46,45 @@ export default function HomeHeroBanner({ ads }: Props) {
     return (
         <div className="hero">
 
-            {/* ── Full-bleed background image ── */}
-            <img
-                key={ad.id}
-                src={ad.url}
-                alt={ad.title}
-                style={{
-                    position: 'absolute',
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
-                    opacity: fading ? 0 : 1,
-                    transition: 'opacity 0.28s ease',
-                    display: 'block',
-                }}
-            />
+            {/* ── Full-bleed background: video OR image ── */}
+            {isVideoUrl(ad.url) ? (
+                <video
+                    key={ad.id}
+                    src={ad.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        opacity: fading ? 0 : 1,
+                        transition: 'opacity 0.28s ease',
+                        display: 'block',
+                    }}
+                />
+            ) : (
+                <img
+                    key={ad.id}
+                    src={ad.url}
+                    alt={ad.title}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        opacity: fading ? 0 : 1,
+                        transition: 'opacity 0.28s ease',
+                        display: 'block',
+                    }}
+                />
+            )}
 
             {/* ── Cinematic gradient overlays ── */}
             <div style={{
