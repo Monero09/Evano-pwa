@@ -140,44 +140,6 @@ export default function AdminDashboard() {
         });
     };
 
-    const handleSetFeatured = async (videoId: string) => {
-        // Optimistic Update
-        const previousState = [...approvedVideos];
-        setApprovedVideos(prev => prev.map(v => ({
-            ...v,
-            is_featured: v.id === videoId
-        })));
-
-        try {
-            // 1. Find the currently featured video and turn it off safely
-            const { error: resetError } = await supabase
-                .from('videos')
-                .update({ is_featured: false })
-                .eq('is_featured', true);
-
-            if (resetError) {
-                console.error("Reset Error:", resetError);
-                throw new Error("Failed to reset old banner");
-            }
-
-            // 2. Turn on the new featured video
-            const { error: updateError } = await supabase
-                .from('videos')
-                .update({ is_featured: true })
-                .eq('id', videoId);
-
-            if (updateError) {
-                console.error("Update Error:", updateError);
-                throw new Error("Failed to set new banner");
-            }
-
-            showToast('Banner updated successfully!', 'success');
-        } catch (error: any) {
-            console.error('Error setting featured:', error);
-            showToast(error.message || 'Failed to set featured banner', 'error');
-            setApprovedVideos(previousState); // Revert UI on failure
-        }
-    };
 
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
 
@@ -338,7 +300,6 @@ export default function AdminDashboard() {
             ) : activeTab === 'approved' ? (
                 // MANAGE VIDEOS TAB (Banner Control)
                 <div>
-                    <p style={{ color: '#aaa', marginBottom: 20 }}>Set which video appears as the Hero Banner on the homepage.</p>
                     {approvedVideos.length === 0 ? (
                         <div style={{ background: '#1A1F2E', padding: 40, borderRadius: 10, textAlign: 'center', color: '#aaa' }}>
                             No approved videos yet.
@@ -353,7 +314,6 @@ export default function AdminDashboard() {
                                             <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Title</th>
                                             <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Category</th>
                                             <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Views</th>
-                                            <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Featured</th>
                                             <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Action</th>
                                         </tr>
                                     </thead>
@@ -376,37 +336,6 @@ export default function AdminDashboard() {
                                                 <td style={{ padding: '12px', fontSize: '14px', color: '#aaa' }}>{vid.category}</td>
                                                 <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px' }}>
                                                     {vid.view_count || 0}
-                                                </td>
-                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleSetFeatured(vid.id)}
-                                                        style={{
-                                                            background: vid.is_featured
-                                                                ? 'linear-gradient(to right, #14532d, #16A34A)'
-                                                                : '#555',
-                                                            color: 'white',
-                                                            border: vid.is_featured ? '2px solid #22C55E' : 'none',
-                                                            padding: '8px 16px',
-                                                            borderRadius: 6,
-                                                            cursor: 'pointer',
-                                                            fontWeight: 'bold',
-                                                            fontSize: '12px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '6px',
-                                                            margin: '0 auto',
-                                                            boxShadow: vid.is_featured ? '0 0 15px rgba(34, 197, 94, 0.5)' : 'none',
-                                                            transition: 'all 0.2s'
-                                                        }}
-                                                    >
-                                                        {vid.is_featured ? (
-                                                            <>
-                                                                <span>★</span> ACTIVE BANNER
-                                                            </>
-                                                        ) : (
-                                                            'Set as Banner'
-                                                        )}
-                                                    </button>
                                                 </td>
                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                     <button
