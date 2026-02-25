@@ -13,9 +13,10 @@ type PlayerProps = {
     poster?: string;
     preRollAdSrc?: string | null;
     bannerAdSrc?: string | null;
+    onViewCounted?: () => void; // fires once after 15 s of real playback
 };
 
-function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: PlayerProps) {
+function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onViewCounted }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -31,6 +32,14 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     const [isShowingAd, setIsShowingAd] = useState(!!preRollAdSrc);
 
     const hideTimerRef = useRef<number | null>(null);
+
+    // ── 15-second view threshold ───────────────────────────────────────
+    // Tracks cumulative seconds of REAL video playback (ads excluded).
+    // Uses a ref so it survives re-renders without triggering them.
+    const playedSecondsRef = useRef(0);
+    const lastTimeRef = useRef<number | null>(null); // last video.currentTime seen
+    const viewCountedRef = useRef(false);            // fire callback only once
+    const VIEW_THRESHOLD = 15; // seconds
 
 
     // ── Prop-change reset ─────────────────────────────────────────────
@@ -93,7 +102,29 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc }: Play
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-        const onTime = () => setCurrentTime(video.currentTime);
+        const onTime = () => {
+            setCurrentTime(video.currentTime);
+
+            // ── Accumulate real playback time (not ad time, not paused time) ──
+            if (!isShowingAd && !video.paused && !viewCountedRef.current) {
+                if (lastTimeRef.current !== null) {
+                    const delta = video.currentTime - lastTimeRef.current;
+                    // Only count forward, small steps (guards against seeking)
+                    if (delta > 0 && delta < 2) {
+                        playedSecondsRef.current += delta;
+                        if (playedSecondsRef.current >= VIEW_THRESHOLD) {
+                            viewCountedRef.current = true;
+                            onViewCounted?.();
+                        }
+                    }
+                }
+                lastTimeRef.current = video.currentTime;
+            } else if (video.paused || isShowingAd) {
+                // Reset last-seen time when paused / ad playing so delta
+                // doesn't spike when playback resumes
+                lastTimeRef.current = null;
+            }
+        };
         const onMeta = () => setDuration(isNaN(video.duration) ? 0 : video.duration);
         const onPlay = () => { setIsPlaying(true); scheduleHide.current(); };
         const onPause = () => { setIsPlaying(false); setShowControls(true); };
@@ -551,7 +582,8 @@ export default function WatchPage() {
     useEffect(() => {
         if (!video) return;
 
-        import('./lib/api').then(mod => mod.incrementView(video.id));
+        // Views are counted in CustomVideoPlayer after 15 s of real playback
+        // via the onViewCounted callback — see below.
 
         // 1. History & Check List (if logged in)
         if (user) {
@@ -629,6 +661,10 @@ export default function WatchPage() {
                         poster={video.thumbnail_url}
                         preRollAdSrc={adUrl}
                         bannerAdSrc={bannerAdUrl}
+                        onViewCounted={() => {
+                            // Called exactly once after 15 s of real playback
+                            import('./lib/api').then(mod => mod.incrementView(video.id));
+                        }}
                     />
                 </section>
 

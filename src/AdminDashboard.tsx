@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './components/AuthProvider';
-import { getPendingVideos, updateVideoStatus } from './lib/api';
+import { getPendingVideos, updateVideoStatus, getCategories, createCategory, deleteCategory, deleteVideo } from './lib/api';
+import type { Category } from './lib/api';
 import { supabase } from './lib/supabase';
 import type { Video } from './lib/types';
 
@@ -9,7 +10,14 @@ export default function AdminDashboard() {
     const [pendingVideos, setPendingVideos] = useState<Video[]>([]);
     const [approvedVideos, setApprovedVideos] = useState<Video[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
-    const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
+    const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'categories'>('pending');
+
+    // Categories state
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [catName, setCatName] = useState('');
+    const [catDesc, setCatDesc] = useState('');
+    const [catLoading, setCatLoading] = useState(false);
+    const [catSaving, setCatSaving] = useState(false);
 
     // Toast State
     const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
@@ -22,8 +30,43 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (user && role === 'admin') {
             loadVideos();
+            loadCategories();
         }
     }, [user, role]);
+
+    const loadCategories = async () => {
+        setCatLoading(true);
+        const data = await getCategories();
+        setCategories(data);
+        setCatLoading(false);
+    };
+
+    const handleAddCategory = async () => {
+        if (!catName.trim()) return;
+        setCatSaving(true);
+        try {
+            await createCategory(catName, catDesc);
+            setCatName('');
+            setCatDesc('');
+            await loadCategories();
+            showToast('Category added!', 'success');
+        } catch (err: any) {
+            showToast(err.message || 'Failed to add category', 'error');
+        } finally {
+            setCatSaving(false);
+        }
+    };
+
+    const handleDeleteCategory = async (id: string, name: string) => {
+        if (!window.confirm(`Delete category "${name}"? Videos using it may lose their category.`)) return;
+        try {
+            await deleteCategory(id);
+            await loadCategories();
+            showToast('Category deleted.', 'success');
+        } catch (err: any) {
+            showToast(err.message || 'Failed to delete category', 'error');
+        }
+    };
 
     const loadVideos = async () => {
         setIsLoadingData(true);
@@ -55,6 +98,23 @@ export default function AdminDashboard() {
         } catch (error) {
             console.error(error);
             showToast('Error updating status', 'error');
+        }
+    };
+
+    const handleDeleteVideo = async (id: string, title: string, isPending: boolean) => {
+        if (!window.confirm(`Are you sure you want to completely delete "${title}"? This cannot be undone.`)) return;
+
+        try {
+            await deleteVideo(id);
+            if (isPending) {
+                setPendingVideos(prev => prev.filter(v => v.id !== id));
+            } else {
+                setApprovedVideos(prev => prev.filter(v => v.id !== id));
+            }
+            showToast('Video deleted successfully', 'success');
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            showToast(error.message || 'Failed to delete video', 'error');
         }
     };
 
@@ -167,6 +227,21 @@ export default function AdminDashboard() {
                 >
                     Manage Videos ({approvedVideos.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab('categories')}
+                    style={{
+                        background: activeTab === 'categories' ? 'linear-gradient(to right, #581c87, #db2777)' : 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '15px'
+                    }}
+                >
+                    🗂 Categories ({categories.length})
+                </button>
             </div>
 
             {isLoadingData ? (
@@ -206,15 +281,21 @@ export default function AdminDashboard() {
                                             Approve
                                         </button>
                                     </div>
-                                    <div style={{ marginTop: 10, textAlign: 'center' }}>
-                                        <a href={vid.video_url} target="_blank" rel="noopener noreferrer" style={{ color: '#D60074', fontSize: 12, textDecoration: 'none' }}>Preview Video</a>
+                                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <a href={vid.video_url} target="_blank" rel="noopener noreferrer" style={{ color: '#D60074', fontSize: 13, textDecoration: 'none', fontWeight: 'bold' }}>Preview Video</a>
+                                        <button
+                                            onClick={() => handleDeleteVideo(vid.id, vid.title, true)}
+                                            style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )
-            ) : (
+            ) : activeTab === 'approved' ? (
                 // MANAGE VIDEOS TAB (Banner Control)
                 <div>
                     <p style={{ color: '#aaa', marginBottom: 20 }}>Set which video appears as the Hero Banner on the homepage.</p>
@@ -232,6 +313,7 @@ export default function AdminDashboard() {
                                         <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Category</th>
                                         <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Views</th>
                                         <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Featured</th>
+                                        <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -283,6 +365,187 @@ export default function AdminDashboard() {
                                                     ) : (
                                                         'Set as Banner'
                                                     )}
+                                                </button>
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDeleteVideo(vid.id, vid.title, false)}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        color: '#ff4d4f',
+                                                        border: '1px solid #ff4d4f',
+                                                        padding: '6px 12px',
+                                                        borderRadius: 6,
+                                                        cursor: 'pointer',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '12px',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.1)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                // MANAGE CATEGORIES TAB
+                <div>
+                    <p style={{ color: '#aaa', marginBottom: 20 }}>
+                        Add or remove video categories. Changes apply immediately to creator upload forms.
+                    </p>
+
+                    {/* Add Category Form */}
+                    <div style={{
+                        background: '#1A1F2E',
+                        border: '1px solid rgba(214, 0, 116, 0.2)',
+                        borderRadius: 12,
+                        padding: 24,
+                        marginBottom: 24
+                    }}>
+                        <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: '#D60074' }}>Add New Category</h3>
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                            <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <label style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>Category Name *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Documentaries"
+                                    value={catName}
+                                    onChange={(e) => setCatName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                                    style={{
+                                        background: '#0B0F19',
+                                        border: '1px solid #333',
+                                        borderRadius: 8,
+                                        padding: '10px 14px',
+                                        color: 'white',
+                                        fontSize: 14,
+                                        outline: 'none',
+                                        transition: 'border-color 0.2s'
+                                    }}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#D60074'}
+                                    onBlur={(e) => e.currentTarget.style.borderColor = '#333'}
+                                />
+                            </div>
+                            <div style={{ flex: '2 1 260px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <label style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>Description (optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="Short description of this category"
+                                    value={catDesc}
+                                    onChange={(e) => setCatDesc(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                                    style={{
+                                        background: '#0B0F19',
+                                        border: '1px solid #333',
+                                        borderRadius: 8,
+                                        padding: '10px 14px',
+                                        color: 'white',
+                                        fontSize: 14,
+                                        outline: 'none',
+                                        transition: 'border-color 0.2s'
+                                    }}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#D60074'}
+                                    onBlur={(e) => e.currentTarget.style.borderColor = '#333'}
+                                />
+                            </div>
+                            <button
+                                onClick={handleAddCategory}
+                                disabled={catSaving || !catName.trim()}
+                                style={{
+                                    background: catSaving || !catName.trim()
+                                        ? '#555'
+                                        : 'linear-gradient(to right, #581c87, #db2777)',
+                                    border: 'none',
+                                    color: 'white',
+                                    padding: '10px 24px',
+                                    borderRadius: 8,
+                                    cursor: catSaving || !catName.trim() ? 'not-allowed' : 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: 14,
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {catSaving ? 'Adding...' : '+ Add Category'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Categories Table */}
+                    {catLoading ? (
+                        <p style={{ color: '#aaa' }}>Loading categories...</p>
+                    ) : categories.length === 0 ? (
+                        <div style={{ background: '#1A1F2E', padding: 40, borderRadius: 10, textAlign: 'center', color: '#aaa' }}>
+                            No categories found. Add one above.
+                        </div>
+                    ) : (
+                        <div style={{ background: '#1A1F2E', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: '#0B0F19', borderBottom: '2px solid #333' }}>
+                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
+                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
+                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</th>
+                                        <th style={{ padding: '14px 20px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {categories.map((cat, idx) => (
+                                        <tr
+                                            key={cat.id}
+                                            style={{ borderBottom: '1px solid #2a2a3a', background: idx % 2 === 0 ? '#1A1F2E' : '#141820', transition: 'background 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = '#1e2438'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#1A1F2E' : '#141820'}
+                                        >
+                                            <td style={{ padding: '14px 20px', fontSize: 13, color: '#555', fontWeight: 600 }}>{idx + 1}</td>
+                                            <td style={{ padding: '14px 20px' }}>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    background: 'rgba(214, 0, 116, 0.12)',
+                                                    border: '1px solid rgba(214, 0, 116, 0.25)',
+                                                    color: '#f472b6',
+                                                    padding: '4px 12px',
+                                                    borderRadius: 20,
+                                                    fontSize: 13,
+                                                    fontWeight: 600
+                                                }}>
+                                                    {cat.name}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '14px 20px', fontSize: 13, color: '#888' }}>
+                                                {cat.description || <span style={{ color: '#444', fontStyle: 'italic' }}>—</span>}
+                                            </td>
+                                            <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                                    style={{
+                                                        background: 'rgba(255, 68, 68, 0.1)',
+                                                        border: '1px solid rgba(255, 68, 68, 0.3)',
+                                                        color: '#ff4d4f',
+                                                        padding: '6px 16px',
+                                                        borderRadius: 6,
+                                                        cursor: 'pointer',
+                                                        fontWeight: 600,
+                                                        fontSize: 13,
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = 'rgba(255,68,68,0.25)';
+                                                        e.currentTarget.style.borderColor = 'rgba(255,68,68,0.6)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'rgba(255,68,68,0.1)';
+                                                        e.currentTarget.style.borderColor = 'rgba(255,68,68,0.3)';
+                                                    }}
+                                                >
+                                                    🗑 Delete
                                                 </button>
                                             </td>
                                         </tr>

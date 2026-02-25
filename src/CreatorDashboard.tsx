@@ -16,6 +16,7 @@ export default function CreatorDashboard() {
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Stats state
     const [myVideos, setMyVideos] = useState<Video[]>([]);
@@ -47,13 +48,14 @@ export default function CreatorDashboard() {
 
         try {
             setUploading(true);
+            setUploadProgress(0);
             await uploadVideo({
                 title,
                 description,
                 category,
                 videoFile,
                 thumbnailFile
-            }, user.id);
+            }, user.id, setUploadProgress);
 
             showToast('Video uploaded successfully! It is now pending approval.', 'success');
             navigate('/');
@@ -62,6 +64,7 @@ export default function CreatorDashboard() {
             showToast(`Upload failed: ${error.message}`, 'error');
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -120,12 +123,58 @@ export default function CreatorDashboard() {
                     disabled={uploading}
                     className="btn-primary"
                     style={{
-                        opacity: uploading ? 0.6 : 1,
+                        opacity: uploading ? 0.7 : 1,
                         cursor: uploading ? 'not-allowed' : 'pointer'
                     }}
                 >
-                    {uploading ? 'Uploading...' : 'Upload Video'}
+                    {uploading
+                        ? uploadProgress > 0
+                            ? `Uploading… ${uploadProgress}%`
+                            : 'Preparing upload…'
+                        : 'Upload Video'}
                 </button>
+
+                {/* ── Upload Progress Bar ── */}
+                {uploading && (
+                    <div style={{ marginTop: 4 }}>
+                        {/* Track */}
+                        <div style={{
+                            width: '100%',
+                            height: 8,
+                            background: 'rgba(255,255,255,0.1)',
+                            borderRadius: 99,
+                            overflow: 'hidden',
+                        }}>
+                            {/* Fill */}
+                            <div style={{
+                                height: '100%',
+                                width: `${uploadProgress}%`,
+                                background: 'linear-gradient(90deg, #581c87, #D60074)',
+                                borderRadius: 99,
+                                transition: 'width 0.25s ease',
+                                boxShadow: '0 0 8px rgba(214,0,116,0.5)',
+                            }} />
+                        </div>
+                        <div style={{
+                            marginTop: 6,
+                            fontSize: 12,
+                            color: '#aaa',
+                            display: 'flex',
+                            justifyContent: 'space-between'
+                        }}>
+                            <span>
+                                {uploadProgress < 100
+                                    ? uploadProgress === 0
+                                        ? 'Uploading thumbnail…'
+                                        : 'Uploading video to R2…'
+                                    : '✓ Saving to database…'}
+                            </span>
+                            <span style={{ color: '#D60074', fontWeight: 700 }}>
+                                {uploadProgress}%
+                            </span>
+                        </div>
+                    </div>
+                )}
             </form>
 
             {/* My Videos List */}

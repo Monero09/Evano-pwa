@@ -462,6 +462,7 @@ svg {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  margin-left: 60px;
 }
 
 .navbar-logo-icon {
@@ -671,6 +672,10 @@ svg {
   .navbar {
     padding: 0 12px;
     height: 60px;
+  }
+
+  .navbar-logo {
+    margin-left: 60px;
   }
 
   .navbar-logo-icon {

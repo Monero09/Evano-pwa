@@ -3,8 +3,9 @@ import type { Ad, Video, VideoUploadData } from './types';
 
 export type { Ad, Video, VideoUploadData }; // Re-export for compatibility
 
-// --- CONFIGURATION ---
-// Configuration is now handled in supabase.ts
+// Public CDN base for R2 — safe to expose (read-only URL, no credentials)
+const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL as string;
+
 
 // --- HELPERS ---
 async function uploadFileToStorage(bucket: string, path: string, file: File): Promise<string | null> {
@@ -60,10 +61,14 @@ export async function fetchVideos(): Promise<Video[]> {
 }
 
 // --- 2. UPLOAD VIDEO (CREATOR) ---
-export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
+export async function uploadVideo(
+    uploadData: VideoUploadData,
+    userId: string,
+    onProgress?: (percent: number) => void
+) {
     const { title, description, category, videoFile, thumbnailFile } = uploadData;
 
-    // A. Upload Thumbnail (using helper — bucket: 'thumbnails')
+    // A. Upload Thumbnail → Supabase Storage (small files, fine here)
     const thumbExt = thumbnailFile.name.split('.').pop();
     const thumbName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${thumbExt}`;
     const thumbPath = `${userId}/${thumbName}`;
@@ -80,25 +85,58 @@ export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
 
     const thumbnailUrl = thumbUrlData.publicUrl;
 
-    // B. Upload Video — hardcoded bucket: 'videos'
-    const fileExt = videoFile.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
+    // B. Request a pre-signed PUT URL from the serverless function
+    //    (R2 credentials stay server-side — never in the browser bundle)
+    const presignRes = await fetch('/api/get-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            fileName: videoFile.name,
+            fileType: videoFile.type || 'video/mp4',
+            userId,
+        }),
+    });
 
-    const { error: uploadError } = await supabase.storage
-        .from('videos')
-        .upload(filePath, videoFile, { cacheControl: '3600', upsert: true });
+    if (!presignRes.ok) {
+        const err = await presignRes.json().catch(() => ({}));
+        throw new Error(`Failed to get upload URL: ${err.error ?? presignRes.statusText}`);
+    }
 
-    if (uploadError) throw new Error(`Failed to upload video: ${uploadError.message}`);
+    const { uploadUrl, fileKey } = await presignRes.json();
 
-    // C. Generate the full public URL
-    const { data: publicUrlData } = supabase.storage
-        .from('videos')
-        .getPublicUrl(filePath);
+    // C. Stream the video file directly from the browser → R2 via XHR
+    //    (XHR lets us track real upload progress; fetch does not)
+    await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
 
-    const finalVideoUrl = publicUrlData.publicUrl;
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable && onProgress) {
+                onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+        });
 
-    // D. Get category_id from category name
+        xhr.addEventListener('load', () => {
+            // R2 returns 200 on success
+            if (xhr.status >= 200 && xhr.status < 300) {
+                onProgress?.(100);
+                resolve();
+            } else {
+                reject(new Error(`R2 upload failed with status ${xhr.status}`));
+            }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error during video upload')));
+        xhr.addEventListener('abort', () => reject(new Error('Video upload was aborted')));
+
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', videoFile.type || 'video/mp4');
+        xhr.send(videoFile);
+    });
+
+    // D. Construct the public CDN URL from the key returned by the serverless function
+    const finalVideoUrl = `${R2_PUBLIC_URL}/${fileKey}`;
+
+    // E. Get category_id from category name
     const { data: categoryData, error: categoryError } = await supabase
         .from('categories')
         .select('id')
@@ -109,17 +147,17 @@ export async function uploadVideo(uploadData: VideoUploadData, userId: string) {
         throw new Error(`Category "${category}" not found in database`);
     }
 
-    // E. Insert Metadata
+    // F. Insert Metadata into Supabase DB
     const { data, error } = await supabase
         .from('videos')
         .insert({
             title,
             description,
             category_id: categoryData.id,
-            video_url: finalVideoUrl,  // full public URL from getPublicUrl()
+            video_url: finalVideoUrl,   // R2 public CDN URL
             thumbnail_url: thumbnailUrl,
-            status: 'approved',     // set to 'pending' to require admin approval
-            uploader_id: userId,         // NOT NULL — required
+            status: 'approved',         // set to 'pending' to require admin approval
+            uploader_id: userId,        // NOT NULL — required
             created_by: userId,         // backward compat
             view_count: 0,
             ads_enabled: true
@@ -164,6 +202,44 @@ export async function updateVideoStatus(id: string, status: 'approved' | 'reject
 
     if (error) throw new Error(`Failed to update status: ${error.message}`);
     return data;
+}
+
+export async function deleteVideo(videoId: string) {
+    // Ideally, we fetch the video to get its file paths and delete from storage first.
+    const { data: video, error: fetchError } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('id', videoId)
+        .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+        throw new Error(`Failed to fetch video details: ${fetchError.message}`);
+    }
+
+    if (video) {
+        // Try to delete thumbnail
+        if (video.thumbnail_url) {
+            const thumbMatch = video.thumbnail_url.split('/public/thumbnails/');
+            if (thumbMatch[1]) {
+                await supabase.storage.from('thumbnails').remove([thumbMatch[1]]);
+            }
+        }
+        // Try to delete video file
+        if (video.video_url) {
+            const videoMatch = video.video_url.split('/public/videos/');
+            if (videoMatch[1]) {
+                await supabase.storage.from('videos').remove([videoMatch[1]]);
+            }
+        }
+    }
+
+    // Now delete DB row
+    const { error } = await supabase
+        .from('videos')
+        .delete()
+        .eq('id', videoId);
+
+    if (error) throw new Error(`Failed to delete video: ${error.message}`);
 }
 
 // --- 5. GET MY VIDEOS (CREATOR) ---
@@ -520,4 +596,85 @@ export async function getRecommendations(userId: string): Promise<Video[]> {
         console.error("Error getting recommendations:", e);
         return [];
     }
+}
+
+// --- 14. CATEGORY MANAGEMENT (ADMIN) ---
+
+export interface Category {
+    id: string;
+    name: string;
+    description?: string | null;
+    created_at?: string;
+}
+
+export async function getCategories(): Promise<Category[]> {
+    try {
+        const { data, error } = await supabase
+            .from('categories')
+            .select('*')
+            .order('name', { ascending: true });
+
+        if (error) {
+            console.error('Fetch categories error:', error.message);
+            return [];
+        }
+        return (data || []) as Category[];
+    } catch (e) {
+        console.error('Fetch categories error:', e);
+        return [];
+    }
+}
+
+export async function createCategory(name: string, description?: string): Promise<Category> {
+    const payload: { name: string; description?: string } = { name: name.trim() };
+    if (description?.trim()) payload.description = description.trim();
+
+    const { data, error } = await supabase
+        .from('categories')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw new Error(`Failed to create category: ${error.message}`);
+    return data as Category;
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+    const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(`Failed to delete category: ${error.message}`);
+}
+
+/**
+ * Deletes a category only if it exists.
+ * Returns true if deleted, false if it was already gone.
+ * Never throws on a "not found" condition — safe to call idempotently.
+ */
+export async function deleteCategoryIfExists(id: string): Promise<boolean> {
+    // First check if the row exists
+    const { data, error: fetchError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('id', id)
+        .single();
+
+    // PGRST116 = "no rows returned" — already doesn't exist, nothing to do
+    if (fetchError) {
+        if (fetchError.code === 'PGRST116') return false;
+        throw new Error(`Failed to look up category: ${fetchError.message}`);
+    }
+
+    if (!data) return false; // extra guard
+
+    // Row exists — delete it
+    const { error: deleteError } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+    if (deleteError) throw new Error(`Failed to delete category: ${deleteError.message}`);
+    return true;
 }
