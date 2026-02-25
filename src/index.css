@@ -265,6 +265,7 @@ svg {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-self: end;
 }
 
 .nav-user-btn {
@@ -447,8 +448,8 @@ svg {
   height: 70px;
   background: rgba(11, 15, 25, 0.95);
   backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0 20px;
   z-index: 1000;
@@ -461,9 +462,11 @@ svg {
   letter-spacing: 2px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
-  margin-left: 60px;
+  /* grid column 2 — always geometrically centered */
+  grid-column: 2;
 }
 
 .navbar-logo-icon {
