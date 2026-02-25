@@ -4,8 +4,8 @@ type ConfirmModalProps = {
     isOpen: boolean;
     title: string;
     message: string;
-    onConfirm: () => void;
-    onCancel: () => void;
+    onConfirm: () => void | Promise<void>;
+    onCancel: () => void | Promise<void>;
     confirmText?: string;
     cancelText?: string;
     isDestructive?: boolean;

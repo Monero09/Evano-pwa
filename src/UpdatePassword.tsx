@@ -14,31 +14,34 @@ export default function UpdatePassword() {
     const { showToast } = useToast();
 
     useEffect(() => {
+        let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
         // Supabase auto-exchanges the recovery code/token from the URL on init.
         // PASSWORD_RECOVERY fires when the user arrives via a reset link.
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'PASSWORD_RECOVERY') {
                 setSessionStatus('valid');
             } else if (event === 'SIGNED_IN' && session) {
-                // Already had a session (e.g., page refresh after recovery)
                 setSessionStatus('valid');
             }
         });
 
-        // Fallback: check current session synchronously in case event already fired
+        // Fallback: check current session in case the event already fired
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 setSessionStatus('valid');
             } else {
-                // Give the onAuthStateChange listener 1.5s to fire before giving up
-                const timer = setTimeout(() => {
+                // Give onAuthStateChange 1.5 s to fire before marking invalid
+                fallbackTimer = setTimeout(() => {
                     setSessionStatus((prev) => prev === 'loading' ? 'invalid' : prev);
                 }, 1500);
-                return () => clearTimeout(timer);
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+        };
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
