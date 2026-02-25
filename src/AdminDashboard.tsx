@@ -276,59 +276,62 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="video-list">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-                            {pendingVideos.map((vid) => (
-                                <div key={vid.id} style={{ background: '#1A1F2E', padding: 15, borderRadius: 10, position: 'relative' }}>
-                                    <div style={{ position: 'relative', height: 160 }}>
-                                        <img src={vid.thumbnail_url} alt={vid.title} style={{ width: '100%', borderRadius: 8, height: '100%', objectFit: 'cover' }} />
-                                        <span style={{ position: 'absolute', top: 8, right: 8, background: '#D60074', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
-                                            PENDING
-                                        </span>
-                                    </div>
-                                    <h3 style={{ margin: '10px 0 5px', fontSize: 16 }}>{vid.title}</h3>
-                                    <p style={{ fontSize: 12, color: '#aaa' }}>{vid.category}</p>
-                                    <p style={{ fontSize: 13, color: '#ccc', margin: '10px 0', height: 40, overflow: 'hidden' }}>{vid.description}</p>
+                        {/* Horizontal scroll so cards never clip on narrow screens */}
+                        <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, minWidth: 320 }}>
+                                {pendingVideos.map((vid) => (
+                                    <div key={vid.id} style={{ background: '#1A1F2E', padding: 15, borderRadius: 10, position: 'relative' }}>
+                                        <div style={{ position: 'relative', height: 160 }}>
+                                            <img src={vid.thumbnail_url} alt={vid.title} style={{ width: '100%', borderRadius: 8, height: '100%', objectFit: 'cover' }} />
+                                            <span style={{ position: 'absolute', top: 8, right: 8, background: '#D60074', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                                                PENDING
+                                            </span>
+                                        </div>
+                                        <h3 style={{ margin: '10px 0 5px', fontSize: 16 }}>{vid.title}</h3>
+                                        <p style={{ fontSize: 12, color: '#aaa' }}>{vid.category}</p>
+                                        <p style={{ fontSize: 13, color: '#ccc', margin: '10px 0', height: 40, overflow: 'hidden' }}>{vid.description}</p>
 
-                                    <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
-                                        <button
-                                            onClick={() => handleStatusUpdate(vid.id, 'rejected')}
-                                            style={{ flex: 1, background: '#ff4d4f', color: 'white', border: 'none', padding: '8px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleStatusUpdate(vid.id, 'approved')}
-                                            style={{ flex: 1, background: '#52c41a', color: 'white', border: 'none', padding: '8px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
-                                        >
-                                            Approve
-                                        </button>
+                                        <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
+                                            <button
+                                                onClick={() => handleStatusUpdate(vid.id, 'rejected')}
+                                                style={{ flex: 1, background: '#ff4d4f', color: 'white', border: 'none', padding: '8px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleStatusUpdate(vid.id, 'approved')}
+                                                style={{ flex: 1, background: '#52c41a', color: 'white', border: 'none', padding: '8px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
+                                            >
+                                                Approve
+                                            </button>
+                                        </div>
+                                        <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                                            <button
+                                                onClick={() => setPreviewVideoUrl(vid.video_url)}
+                                                style={{
+                                                    flex: 1,
+                                                    background: 'linear-gradient(135deg, #581c87, #D60074)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '8px',
+                                                    borderRadius: 4,
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                ▶ Watch
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteVideo(vid.id, vid.title, true)}
+                                                style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' }}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                                        <button
-                                            onClick={() => setPreviewVideoUrl(vid.video_url)}
-                                            style={{
-                                                flex: 1,
-                                                background: 'linear-gradient(135deg, #581c87, #D60074)',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '8px',
-                                                borderRadius: 4,
-                                                cursor: 'pointer',
-                                                fontWeight: 'bold',
-                                                fontSize: 13,
-                                            }}
-                                        >
-                                            ▶ Watch
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteVideo(vid.id, vid.title, true)}
-                                            style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' }}
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )
@@ -341,93 +344,95 @@ export default function AdminDashboard() {
                             No approved videos yet.
                         </div>
                     ) : (
-                        <div style={{ background: '#1A1F2E', borderRadius: 10, overflow: 'hidden' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#0B0F19', borderBottom: '2px solid #333' }}>
-                                        <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Thumbnail</th>
-                                        <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Title</th>
-                                        <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Category</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Views</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Featured</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {approvedVideos.map((vid, index) => (
-                                        <tr key={vid.id} style={{ borderBottom: '1px solid #333', background: index % 2 === 0 ? '#1A1F2E' : '#141820' }}>
-                                            <td style={{ padding: '12px' }}>
-                                                <img
-                                                    src={vid.thumbnail_url}
-                                                    alt={vid.title}
-                                                    style={{ width: 80, height: 45, objectFit: 'cover', borderRadius: 4 }}
-                                                />
-                                            </td>
-                                            <td style={{ padding: '12px', maxWidth: '300px' }}>
-                                                <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>{vid.title}</div>
-                                                <div style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {vid.description}
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '12px', fontSize: '14px', color: '#aaa' }}>{vid.category}</td>
-                                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px' }}>
-                                                {vid.view_count || 0}
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleSetFeatured(vid.id)}
-                                                    style={{
-                                                        background: vid.is_featured
-                                                            ? 'linear-gradient(to right, #581c87, #db2777)'
-                                                            : '#555',
-                                                        color: 'white',
-                                                        border: vid.is_featured ? '2px solid #D60074' : 'none',
-                                                        padding: '8px 16px',
-                                                        borderRadius: 6,
-                                                        cursor: 'pointer',
-                                                        fontWeight: 'bold',
-                                                        fontSize: '12px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        margin: '0 auto',
-                                                        boxShadow: vid.is_featured ? '0 0 15px rgba(214, 0, 116, 0.5)' : 'none',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    {vid.is_featured ? (
-                                                        <>
-                                                            <span>★</span> ACTIVE BANNER
-                                                        </>
-                                                    ) : (
-                                                        'Set as Banner'
-                                                    )}
-                                                </button>
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleDeleteVideo(vid.id, vid.title, false)}
-                                                    style={{
-                                                        background: 'transparent',
-                                                        color: '#ff4d4f',
-                                                        border: '1px solid #ff4d4f',
-                                                        padding: '6px 12px',
-                                                        borderRadius: 6,
-                                                        cursor: 'pointer',
-                                                        fontWeight: 'bold',
-                                                        fontSize: '12px',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.1)'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
+                        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                            <div style={{ background: '#1A1F2E', borderRadius: 10, overflow: 'hidden', minWidth: 760 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#0B0F19', borderBottom: '2px solid #333' }}>
+                                            <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Thumbnail</th>
+                                            <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Title</th>
+                                            <th style={{ padding: '15px', textAlign: 'left', fontSize: '14px', fontWeight: 'bold' }}>Category</th>
+                                            <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Views</th>
+                                            <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Featured</th>
+                                            <th style={{ padding: '15px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {approvedVideos.map((vid, index) => (
+                                            <tr key={vid.id} style={{ borderBottom: '1px solid #333', background: index % 2 === 0 ? '#1A1F2E' : '#141820' }}>
+                                                <td style={{ padding: '12px' }}>
+                                                    <img
+                                                        src={vid.thumbnail_url}
+                                                        alt={vid.title}
+                                                        style={{ width: 80, height: 45, objectFit: 'cover', borderRadius: 4 }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '12px', maxWidth: '300px' }}>
+                                                    <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>{vid.title}</div>
+                                                    <div style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {vid.description}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '12px', fontSize: '14px', color: '#aaa' }}>{vid.category}</td>
+                                                <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px' }}>
+                                                    {vid.view_count || 0}
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleSetFeatured(vid.id)}
+                                                        style={{
+                                                            background: vid.is_featured
+                                                                ? 'linear-gradient(to right, #581c87, #db2777)'
+                                                                : '#555',
+                                                            color: 'white',
+                                                            border: vid.is_featured ? '2px solid #D60074' : 'none',
+                                                            padding: '8px 16px',
+                                                            borderRadius: 6,
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '12px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            margin: '0 auto',
+                                                            boxShadow: vid.is_featured ? '0 0 15px rgba(214, 0, 116, 0.5)' : 'none',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        {vid.is_featured ? (
+                                                            <>
+                                                                <span>★</span> ACTIVE BANNER
+                                                            </>
+                                                        ) : (
+                                                            'Set as Banner'
+                                                        )}
+                                                    </button>
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleDeleteVideo(vid.id, vid.title, false)}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            color: '#ff4d4f',
+                                                            border: '1px solid #ff4d4f',
+                                                            padding: '6px 12px',
+                                                            borderRadius: 6,
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '12px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.1)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -523,75 +528,78 @@ export default function AdminDashboard() {
                             No categories found. Add one above.
                         </div>
                     ) : (
-                        <div style={{ background: '#1A1F2E', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#0B0F19', borderBottom: '2px solid #333' }}>
-                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
-                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
-                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</th>
-                                        <th style={{ padding: '14px 20px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {categories.map((cat, idx) => (
-                                        <tr
-                                            key={cat.id}
-                                            style={{ borderBottom: '1px solid #2a2a3a', background: idx % 2 === 0 ? '#1A1F2E' : '#141820', transition: 'background 0.15s' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = '#1e2438'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#1A1F2E' : '#141820'}
-                                        >
-                                            <td style={{ padding: '14px 20px', fontSize: 13, color: '#555', fontWeight: 600 }}>{idx + 1}</td>
-                                            <td style={{ padding: '14px 20px' }}>
-                                                <span style={{
-                                                    display: 'inline-block',
-                                                    background: 'rgba(214, 0, 116, 0.12)',
-                                                    border: '1px solid rgba(214, 0, 116, 0.25)',
-                                                    color: '#f472b6',
-                                                    padding: '4px 12px',
-                                                    borderRadius: 20,
-                                                    fontSize: 13,
-                                                    fontWeight: 600
-                                                }}>
-                                                    {cat.name}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '14px 20px', fontSize: 13, color: '#888' }}>
-                                                {cat.description || <span style={{ color: '#444', fontStyle: 'italic' }}>—</span>}
-                                            </td>
-                                            <td style={{ padding: '14px 20px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                                                    style={{
-                                                        background: 'rgba(255, 68, 68, 0.1)',
-                                                        border: '1px solid rgba(255, 68, 68, 0.3)',
-                                                        color: '#ff4d4f',
-                                                        padding: '6px 16px',
-                                                        borderRadius: 6,
-                                                        cursor: 'pointer',
-                                                        fontWeight: 600,
-                                                        fontSize: 13,
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = 'rgba(255,68,68,0.25)';
-                                                        e.currentTarget.style.borderColor = 'rgba(255,68,68,0.6)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = 'rgba(255,68,68,0.1)';
-                                                        e.currentTarget.style.borderColor = 'rgba(255,68,68,0.3)';
-                                                    }}
-                                                >
-                                                    🗑 Delete
-                                                </button>
-                                            </td>
+                        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                            <div style={{ background: '#1A1F2E', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', minWidth: 520 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#0B0F19', borderBottom: '2px solid #333' }}>
+                                            <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
+                                            <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
+                                            <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</th>
+                                            <th style={{ padding: '14px 20px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {categories.map((cat, idx) => (
+                                            <tr
+                                                key={cat.id}
+                                                style={{ borderBottom: '1px solid #2a2a3a', background: idx % 2 === 0 ? '#1A1F2E' : '#141820', transition: 'background 0.15s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#1e2438'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#1A1F2E' : '#141820'}
+                                            >
+                                                <td style={{ padding: '14px 20px', fontSize: 13, color: '#555', fontWeight: 600 }}>{idx + 1}</td>
+                                                <td style={{ padding: '14px 20px' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        background: 'rgba(214, 0, 116, 0.12)',
+                                                        border: '1px solid rgba(214, 0, 116, 0.25)',
+                                                        color: '#f472b6',
+                                                        padding: '4px 12px',
+                                                        borderRadius: 20,
+                                                        fontSize: 13,
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {cat.name}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '14px 20px', fontSize: 13, color: '#888' }}>
+                                                    {cat.description || <span style={{ color: '#444', fontStyle: 'italic' }}>—</span>}
+                                                </td>
+                                                <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                                        style={{
+                                                            background: 'rgba(255, 68, 68, 0.1)',
+                                                            border: '1px solid rgba(255, 68, 68, 0.3)',
+                                                            color: '#ff4d4f',
+                                                            padding: '6px 16px',
+                                                            borderRadius: 6,
+                                                            cursor: 'pointer',
+                                                            fontWeight: 600,
+                                                            fontSize: 13,
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.background = 'rgba(255,68,68,0.25)';
+                                                            e.currentTarget.style.borderColor = 'rgba(255,68,68,0.6)';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.background = 'rgba(255,68,68,0.1)';
+                                                            e.currentTarget.style.borderColor = 'rgba(255,68,68,0.3)';
+                                                        }}
+                                                    >
+                                                        🗑 Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    )
+                    }
+                </div >
             )}
 
             <style>{`
@@ -606,92 +614,94 @@ export default function AdminDashboard() {
             `}</style>
 
             {/* ── Video Preview Modal ── */}
-            {previewVideoUrl && (
-                <div
-                    onClick={() => setPreviewVideoUrl(null)}
-                    style={{
-                        position: 'fixed', inset: 0,
-                        background: 'rgba(0,0,0,0.88)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 20,
-                        backdropFilter: 'blur(6px)',
-                    }}
-                >
-                    {/* Stop click inside from closing */}
+            {
+                previewVideoUrl && (
                     <div
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={() => setPreviewVideoUrl(null)}
                         style={{
-                            position: 'relative',
-                            width: '100%',
-                            maxWidth: 900,
-                            animation: 'modalIn 0.2s ease',
+                            position: 'fixed', inset: 0,
+                            background: 'rgba(0,0,0,0.88)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 20,
+                            backdropFilter: 'blur(6px)',
                         }}
                     >
-                        {/* Close button */}
-                        <button
-                            onClick={() => setPreviewVideoUrl(null)}
+                        {/* Stop click inside from closing */}
+                        <div
+                            onClick={(e) => e.stopPropagation()}
                             style={{
-                                position: 'absolute',
-                                top: -16,
-                                right: -16,
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                background: '#D60074',
-                                border: 'none',
-                                color: 'white',
-                                fontSize: 20,
-                                lineHeight: 1,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 1,
-                                boxShadow: '0 4px 16px rgba(214,0,116,0.5)',
-                            }}
-                            aria-label="Close preview"
-                        >
-                            ✕
-                        </button>
-
-                        {/* Video player */}
-                        <video
-                            src={previewVideoUrl}
-                            controls
-                            autoPlay
-                            playsInline
-                            style={{
+                                position: 'relative',
                                 width: '100%',
-                                borderRadius: 12,
-                                boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
-                                display: 'block',
-                                maxHeight: '80vh',
-                                background: '#000',
+                                maxWidth: 900,
+                                animation: 'modalIn 0.2s ease',
                             }}
-                        />
+                        >
+                            {/* Close button */}
+                            <button
+                                onClick={() => setPreviewVideoUrl(null)}
+                                style={{
+                                    position: 'absolute',
+                                    top: -16,
+                                    right: -16,
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: '50%',
+                                    background: '#D60074',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: 20,
+                                    lineHeight: 1,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 1,
+                                    boxShadow: '0 4px 16px rgba(214,0,116,0.5)',
+                                }}
+                                aria-label="Close preview"
+                            >
+                                ✕
+                            </button>
 
-                        {/* Video title strip */}
-                        <div style={{
-                            background: 'rgba(0,0,0,0.6)',
-                            backdropFilter: 'blur(8px)',
-                            padding: '10px 16px',
-                            borderRadius: '0 0 12px 12px',
-                            marginTop: -4,
-                            fontSize: 13,
-                            color: '#ccc',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                        }}>
-                            <span>Admin Preview — <strong style={{ color: 'white' }}>not yet live</strong></span>
-                            <span style={{ fontSize: 11, color: '#888' }}>Press ESC to close</span>
+                            {/* Video player */}
+                            <video
+                                src={previewVideoUrl}
+                                controls
+                                autoPlay
+                                playsInline
+                                style={{
+                                    width: '100%',
+                                    borderRadius: 12,
+                                    boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
+                                    display: 'block',
+                                    maxHeight: '80vh',
+                                    background: '#000',
+                                }}
+                            />
+
+                            {/* Video title strip */}
+                            <div style={{
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(8px)',
+                                padding: '10px 16px',
+                                borderRadius: '0 0 12px 12px',
+                                marginTop: -4,
+                                fontSize: 13,
+                                color: '#ccc',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            }}>
+                                <span>Admin Preview — <strong style={{ color: 'white' }}>not yet live</strong></span>
+                                <span style={{ fontSize: 11, color: '#888' }}>Press ESC to close</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* ── Confirm / Destructive Action Modal ── */}
             <ConfirmModal
@@ -712,6 +722,6 @@ export default function AdminDashboard() {
                     }
                 }}
             />
-        </div>
+        </div >
     );
 }

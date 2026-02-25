@@ -203,75 +203,77 @@ export default function CreatorDashboard() {
             {myVideos.length > 0 && (
                 <div style={{ marginTop: 60 }}>
                     <h2 style={{ marginBottom: 24 }}>My Videos</h2>
-                    <div style={{ display: 'grid', gap: 12 }}>
-                        {myVideos.map((video) => (
-                            <div key={video.id} style={{
-                                background: 'rgba(26, 31, 46, 0.6)',
-                                border: `1px solid ${video.status === 'rejected'
+                    <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+                        <div style={{ display: 'grid', gap: 12, minWidth: 460 }}>
+                            {myVideos.map((video) => (
+                                <div key={video.id} style={{
+                                    background: 'rgba(26, 31, 46, 0.6)',
+                                    border: `1px solid ${video.status === 'rejected'
                                         ? 'rgba(255,77,79,0.25)'
                                         : 'rgba(214, 0, 116, 0.1)'
-                                    }`,
-                                borderRadius: 12,
-                                padding: 16,
-                                display: 'flex',
-                                gap: 16,
-                                alignItems: 'center',
-                                transition: 'all 0.2s ease',
-                                position: 'relative',
-                            }}
-                                onMouseEnter={(e) => e.currentTarget.style.borderColor =
-                                    video.status === 'rejected' ? 'rgba(255,77,79,0.5)' : 'rgba(214, 0, 116, 0.3)'}
-                                onMouseLeave={(e) => e.currentTarget.style.borderColor =
-                                    video.status === 'rejected' ? 'rgba(255,77,79,0.25)' : 'rgba(214, 0, 116, 0.1)'}
-                            >
-                                <img src={video.thumbnail_url} alt={video.title} style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h3 style={{ marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</h3>
-                                    <p style={{ fontSize: 12, color: '#B0B8C1', marginBottom: 8 }}>{video.views || 0} views</p>
-                                    <span className={`badge badge-${video.status === 'approved' ? 'green'
+                                        }`,
+                                    borderRadius: 12,
+                                    padding: 16,
+                                    display: 'flex',
+                                    gap: 16,
+                                    alignItems: 'center',
+                                    transition: 'all 0.2s ease',
+                                    position: 'relative',
+                                }}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor =
+                                        video.status === 'rejected' ? 'rgba(255,77,79,0.5)' : 'rgba(214, 0, 116, 0.3)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.borderColor =
+                                        video.status === 'rejected' ? 'rgba(255,77,79,0.25)' : 'rgba(214, 0, 116, 0.1)'}
+                                >
+                                    <img src={video.thumbnail_url} alt={video.title} style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h3 style={{ marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</h3>
+                                        <p style={{ fontSize: 12, color: '#B0B8C1', marginBottom: 8 }}>{video.views || 0} views</p>
+                                        <span className={`badge badge-${video.status === 'approved' ? 'green'
                                             : video.status === 'pending' ? 'yellow'
                                                 : 'red'
-                                        }`}>
-                                        {video.status}
-                                    </span>
-                                    {video.status === 'rejected' && (
-                                        <p style={{ fontSize: 11, color: '#ff4d4f', marginTop: 6 }}>
-                                            This video was rejected. You may delete it and re-upload.
-                                        </p>
-                                    )}
-                                </div>
+                                            }`}>
+                                            {video.status}
+                                        </span>
+                                        {video.status === 'rejected' && (
+                                            <p style={{ fontSize: 11, color: '#ff4d4f', marginTop: 6 }}>
+                                                This video was rejected. You may delete it and re-upload.
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Delete button — always visible, top-right of card */}
-                                <button
-                                    onClick={() => handleDeleteVideo(video)}
-                                    title="Delete video"
-                                    style={{
-                                        flexShrink: 0,
-                                        background: 'transparent',
-                                        border: '1px solid rgba(255,77,79,0.4)',
-                                        color: '#ff4d4f',
-                                        borderRadius: 8,
-                                        padding: '6px 12px',
-                                        cursor: 'pointer',
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        transition: 'all 0.15s ease',
-                                        whiteSpace: 'nowrap',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,77,79,0.12)';
-                                        e.currentTarget.style.borderColor = '#ff4d4f';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'transparent';
-                                        e.currentTarget.style.borderColor = 'rgba(255,77,79,0.4)';
-                                    }}
-                                >
-                                    🗑 Delete
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                                    {/* Delete button — always visible, top-right of card */}
+                                    <button
+                                        onClick={() => handleDeleteVideo(video)}
+                                        title="Delete video"
+                                        style={{
+                                            flexShrink: 0,
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255,77,79,0.4)',
+                                            color: '#ff4d4f',
+                                            borderRadius: 8,
+                                            padding: '6px 12px',
+                                            cursor: 'pointer',
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            transition: 'all 0.15s ease',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255,77,79,0.12)';
+                                            e.currentTarget.style.borderColor = '#ff4d4f';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.borderColor = 'rgba(255,77,79,0.4)';
+                                        }}
+                                    >
+                                        🗑 Delete
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>{/* end scroll wrapper */}
                 </div>
             )}
 
