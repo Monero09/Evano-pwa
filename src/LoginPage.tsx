@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from './components/AuthProvider';
 import { useToast } from './components/Toast';
 
@@ -74,6 +74,23 @@ export default function LoginPage() {
                         className="auth-input"
                         required
                     />
+
+                    {/* Forgot password — only shown on sign-in, not register */}
+                    {!isRegistering && (
+                        <div style={{ textAlign: 'right', marginTop: -6 }}>
+                            <Link
+                                to="/forgot-password"
+                                style={{
+                                    fontSize: 13,
+                                    color: '#22C55E',
+                                    textDecoration: 'none',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Forgot password?
+                            </Link>
+                        </div>
+                    )}
 
                     {isRegistering && (
                         <select

@@ -5,6 +5,8 @@ import SearchPage from './SearchPage';
 import WatchPage from './WatchPage';
 import NotFoundPage from './NotFoundPage';
 import LoginPage from './LoginPage';
+import ForgotPassword from './ForgotPassword';
+import UpdatePassword from './UpdatePassword';
 import CreatorDashboard from './CreatorDashboard';
 import AdminDashboard from './AdminDashboard';
 import AdminAdsPage from './AdminAdsPage';
@@ -75,6 +77,8 @@ export default function App() {
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/watch/:id" element={<WatchPage />} />
                         <Route path="/login" element={<LoginPage />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/update-password" element={<UpdatePassword />} />
                         <Route
                             path="/creator"
                             element={
