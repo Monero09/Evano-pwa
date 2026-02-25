@@ -353,6 +353,42 @@ export async function deleteAd(adId: string): Promise<void> {
     if (error) throw new Error(`Failed to delete ad: ${error.message}`);
 }
 
+/** Fetch banner ads assigned to a global site slot, ordered by slot number */
+export async function getGlobalBannerAds(): Promise<Ad[]> {
+    try {
+        const { data, error } = await supabase
+            .from('ads')
+            .select('*')
+            .eq('type', 'banner')
+            .not('global_slot', 'is', null)
+            .order('global_slot', { ascending: true })
+            .limit(4);
+        if (error) { console.error('getGlobalBannerAds:', error.message); return []; }
+        return (data || []) as Ad[];
+    } catch (e) {
+        console.error('getGlobalBannerAds:', e);
+        return [];
+    }
+}
+
+/** Assign (or clear) a global banner slot for an ad.
+ *  slot = 1-4 to assign, null to remove from global rotation. */
+export async function setAdGlobalSlot(adId: string, slot: number | null): Promise<void> {
+    // Clear any existing ad occupying the same slot first
+    if (slot !== null) {
+        await supabase
+            .from('ads')
+            .update({ global_slot: null })
+            .eq('global_slot', slot)
+            .neq('id', adId);
+    }
+    const { error } = await supabase
+        .from('ads')
+        .update({ global_slot: slot })
+        .eq('id', adId);
+    if (error) throw new Error(`Failed to set global slot: ${error.message}`);
+}
+
 export async function assignAdsToVideo(
     videoId: string,
     ads: {

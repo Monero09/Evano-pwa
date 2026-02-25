@@ -12,11 +12,10 @@ type PlayerProps = {
     videoSrc: string;
     poster?: string;
     preRollAdSrc?: string | null;
-    bannerAdSrc?: string | null;
     onViewCounted?: () => void; // fires once after 15 s of real playback
 };
 
-function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onViewCounted }: PlayerProps) {
+function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -25,7 +24,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
-    const [showBannerAd, setShowBannerAd] = useState(false);
 
     // Ad state
     const [currentSrc, setCurrentSrc] = useState(preRollAdSrc || videoSrc);
@@ -46,7 +44,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
     useEffect(() => {
         setCurrentSrc(preRollAdSrc || videoSrc);
         setIsShowingAd(!!preRollAdSrc);
-        setShowBannerAd(false);
     }, [videoSrc, preRollAdSrc]);
 
     // ── Ad-end handler ────────────────────────────────────────────────
@@ -90,13 +87,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ── Banner-ad timer ───────────────────────────────────────────────
-    useEffect(() => {
-        if (!isPlaying || isShowingAd || !bannerAdSrc) return;
-        if (videoSrc?.includes('youtube.com') || videoSrc?.includes('youtu.be')) return;
-        const t = setTimeout(() => setShowBannerAd(true), 5000);
-        return () => clearTimeout(t);
-    }, [isPlaying, isShowingAd, bannerAdSrc, videoSrc]);
 
     // ── Video native event listeners ──────────────────────────────────
     useEffect(() => {
@@ -288,43 +278,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
                     </div>
                 )}
 
-                {/* ── Banner image ad (lower-third) ── */}
-                {showBannerAd && bannerAdSrc && (
-                    <div style={{
-                        position: 'absolute', bottom: 80, left: 16,
-                        borderRadius: 8, overflow: 'hidden',
-                        maxWidth: 300,
-                        animation: 'slideInLeft 0.5s ease-out',
-                        zIndex: 20,
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-                        border: '1px solid rgba(34, 197, 94, 0.35)',
-                    }}>
-                        <button
-                            onClick={e => { e.stopPropagation(); setShowBannerAd(false); }}
-                            onTouchEnd={e => { e.stopPropagation(); setShowBannerAd(false); }}
-                            style={{
-                                position: 'absolute', top: 5, right: 5,
-                                background: 'rgba(0,0,0,0.7)', border: 'none',
-                                color: 'white', width: 22, height: 22,
-                                borderRadius: '50%', cursor: 'pointer',
-                                fontSize: 13, display: 'flex',
-                                alignItems: 'center', justifyContent: 'center',
-                                zIndex: 21,
-                            }}
-                        >×</button>
-                        <div style={{
-                            position: 'absolute', bottom: 0, left: 0, right: 0,
-                            background: 'rgba(0,0,0,0.55)', fontSize: 9,
-                            color: 'rgba(255,255,255,0.7)', padding: '3px 8px',
-                            letterSpacing: '0.08em', textTransform: 'uppercase',
-                            pointerEvents: 'none',
-                        }}>Sponsored</div>
-                        <img
-                            src={bannerAdSrc} alt="Advertisement" draggable={false}
-                            style={{ display: 'block', width: '100%', maxHeight: 130, objectFit: 'cover' }}
-                        />
-                    </div>
-                )}
 
                 {/* ═══════════════════════════════════════════════════════════
                     CONTROLS OVERLAY
@@ -566,7 +519,6 @@ export default function WatchPage() {
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
     const [adUrl, setAdUrl] = useState<string | null>(null);
-    const [bannerAdUrl, setBannerAdUrl] = useState<string | null>(null);
     const [inMyList, setInMyList] = useState(false);
 
     useEffect(() => {
@@ -598,30 +550,16 @@ export default function WatchPage() {
         if (video.ads_enabled && !isYouTube) {
             // Inner async IIFE so we can use await inside a sync useEffect
             (async () => {
-                // --- Pre-roll: pick one at random from up to 2 slots ---
                 const prerollIds = [video.preroll_ad_id, video.preroll_ad_id_2].filter(Boolean) as string[];
                 const pickedPrerollId = prerollIds.length
                     ? prerollIds[Math.floor(Math.random() * prerollIds.length)]
                     : null;
 
-                // --- Banner: pick one at random from up to 2 slots ---
-                const bannerIds = [video.banner_ad_id_1, video.banner_ad_id_2].filter(Boolean) as string[];
-                const pickedBannerId = bannerIds.length
-                    ? bannerIds[Math.floor(Math.random() * bannerIds.length)]
-                    : null;
-
-                // Fetch both concurrently
-                const [prerollAd, bannerAd] = await Promise.all([
-                    pickedPrerollId ? getAdById(pickedPrerollId) : Promise.resolve(null),
-                    pickedBannerId ? getAdById(pickedBannerId) : Promise.resolve(null),
-                ]);
-
+                const prerollAd = await (pickedPrerollId ? getAdById(pickedPrerollId) : Promise.resolve(null));
                 setAdUrl(prerollAd && prerollAd.type === 'video' ? prerollAd.url : null);
-                setBannerAdUrl(bannerAd && bannerAd.type === 'banner' ? bannerAd.url : null);
             })();
         } else {
             setAdUrl(null);
-            setBannerAdUrl(null);
         }
     }, [video, user]);
 
@@ -660,7 +598,6 @@ export default function WatchPage() {
                         videoSrc={video.video_url}
                         poster={video.thumbnail_url}
                         preRollAdSrc={adUrl}
-                        bannerAdSrc={bannerAdUrl}
                         onViewCounted={() => {
                             // Called exactly once after 15 s of real playback
                             import('./lib/api').then(mod => mod.incrementView(video.id));

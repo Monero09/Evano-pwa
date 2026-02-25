@@ -501,11 +501,12 @@ svg {
 }
 
 .container {
-  margin-top: 70px;
+  margin-top: calc(70px + var(--ad-banner-h, 0px));
   padding: 20px;
   max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
+  transition: margin-top 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hero {

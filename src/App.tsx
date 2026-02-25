@@ -13,6 +13,7 @@ import AdminAdsPage from './AdminAdsPage';
 import AuthGuard from './components/AuthGuard';
 import Sidebar from './components/Sidebar';
 import ErrorBoundary from './components/ErrorBoundary';
+import GlobalAdBanner from './components/GlobalAdBanner';
 
 // Type for PWA install prompt
 interface BeforeInstallPromptEvent extends Event {
@@ -52,6 +53,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
     return (
         <div key={location.pathname} className="page-transition">
             <Sidebar />
+            <GlobalAdBanner />
             <div className="page-content">
                 {children}
             </div>

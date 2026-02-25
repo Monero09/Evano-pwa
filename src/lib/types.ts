@@ -3,8 +3,9 @@ export interface Ad {
     id: string;
     title: string;
     type: 'video' | 'banner';
-    url: string; // Video URL or Image URL
+    url: string;
     created_at: string;
+    global_slot?: number | null; // 1-4: assigned global site banner slot
 }
 
 export interface Video {

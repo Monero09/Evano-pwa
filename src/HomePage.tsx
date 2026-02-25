@@ -72,7 +72,7 @@ export default function HomePage() {
     const skitVideo = videos.filter(v => v.category === 'Skit video');
 
     if (loading && !videos.length) return (
-        <div style={{ marginTop: 70, paddingTop: 20 }}>
+        <div style={{ marginTop: 'calc(70px + var(--ad-banner-h, 0px))', paddingTop: 20, transition: 'margin-top 0.35s' }}>
             <div className="container">
                 <div className="videos-row">
                     {[...Array(5)].map((_, i) => (

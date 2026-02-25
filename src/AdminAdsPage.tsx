@@ -9,17 +9,17 @@ import {
     assignAdsToVideo,
     toggleVideoAds,
     deleteAd,
+    setAdGlobalSlot,
 } from './lib/api';
 import type { Ad, Video } from './lib/types';
 import { supabase } from './lib/supabase';
 import ConfirmModal from './components/ConfirmModal';
 
-// Per-video draft state for the 4 ad slot inputs
+// Per-video draft state for the 2 pre-roll slots only
+// (banner ads are now site-wide via GlobalAdBanner — not per-video)
 type AdDraft = {
     preroll1: string;
     preroll2: string;
-    banner1: string;
-    banner2: string;
 };
 
 type PendingAction = {
@@ -71,8 +71,6 @@ export default function AdminAdsPage() {
             initialDrafts[v.id] = {
                 preroll1: v.preroll_ad_id || '',
                 preroll2: v.preroll_ad_id_2 || '',
-                banner1: v.banner_ad_id_1 || '',
-                banner2: v.banner_ad_id_2 || '',
             };
         });
         setDrafts(initialDrafts);
@@ -131,6 +129,17 @@ export default function AdminAdsPage() {
         setUploading(false);
     };
 
+    const handleSetGlobalSlot = async (ad: Ad, slot: number | null) => {
+        try {
+            await setAdGlobalSlot(ad.id, slot);
+            const label = slot ? `Slot ${slot}` : 'removed from global banner';
+            showToast(`"${ad.title}" ${slot ? `assigned to Global Banner ${label}` : label}`, 'success');
+            loadData();
+        } catch (err: any) {
+            showToast(err.message || 'Failed to update slot', 'error');
+        }
+    };
+
     const handleDeleteAd = (ad: Ad) => {
         setPendingAction({
             title: 'Delete Ad',
@@ -161,8 +170,8 @@ export default function AdminAdsPage() {
             await assignAdsToVideo(videoId, {
                 preroll1: draft.preroll1.trim() || null,
                 preroll2: draft.preroll2.trim() || null,
-                banner1: draft.banner1.trim() || null,
-                banner2: draft.banner2.trim() || null,
+                banner1: null,
+                banner2: null,
             });
             showToast('Ad slots saved!', 'success');
             setEditOpen(prev => ({ ...prev, [videoId]: false }));
@@ -279,11 +288,45 @@ export default function AdminAdsPage() {
                                 <h4 style={{ margin: '0 0 4px', fontSize: 14 }}>{ad.title}</h4>
                                 <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
                                     Type: <span style={{ color: '#22C55E', fontWeight: 600 }}>{ad.type}</span>
+                                    {ad.type === 'banner' && ad.global_slot && (
+                                        <span style={{ marginLeft: 8, color: '#22C55E', fontSize: 11 }}>
+                                            🌐 Global Slot {ad.global_slot}
+                                        </span>
+                                    )}
                                 </p>
                                 <p style={{ fontSize: 10, color: '#555', margin: 0, wordBreak: 'break-all' }}>
                                     ID: {ad.id}
                                 </p>
                             </div>
+
+                            {/* Global banner slot selector (banner-type ads only) */}
+                            {ad.type === 'banner' && (
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 10, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                                        🌐 Global Banner Slot
+                                    </label>
+                                    <select
+                                        value={ad.global_slot ?? ''}
+                                        onChange={e => handleSetGlobalSlot(ad, e.target.value ? Number(e.target.value) : null)}
+                                        style={{
+                                            width: '100%',
+                                            background: '#0B0F19',
+                                            border: '1px solid rgba(34,197,94,0.3)',
+                                            borderRadius: 6,
+                                            color: '#fff',
+                                            padding: '7px 10px',
+                                            fontSize: 12,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        <option value="">None (not in rotation)</option>
+                                        <option value="1">Slot 1</option>
+                                        <option value="2">Slot 2</option>
+                                        <option value="3">Slot 3</option>
+                                        <option value="4">Slot 4</option>
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Delete button */}
                             <button
@@ -321,7 +364,7 @@ export default function AdminAdsPage() {
                 <h2 style={{ marginBottom: 20 }}>Manage Video Ads</h2>
                 <div style={{ display: 'grid', gap: 12 }}>
                     {videos.map(video => {
-                        const draft = drafts[video.id] || { preroll1: '', preroll2: '', banner1: '', banner2: '' };
+                        const draft = drafts[video.id] || { preroll1: '', preroll2: '' };
                         const isOpen = !!editOpen[video.id];
                         const isSaving = !!saving[video.id];
 
@@ -352,8 +395,6 @@ export default function AdminAdsPage() {
                                             <span>Ads: {video.ads_enabled ? '✅ Enabled' : '❌ Disabled'}</span>
                                             <span>Pre-roll 1: <span style={{ color: video.preroll_ad_id ? '#22C55E' : '#555' }}>{video.preroll_ad_id ? '✓ Set' : 'None'}</span></span>
                                             <span>Pre-roll 2: <span style={{ color: video.preroll_ad_id_2 ? '#22C55E' : '#555' }}>{video.preroll_ad_id_2 ? '✓ Set' : 'None'}</span></span>
-                                            <span>Banner 1: <span style={{ color: video.banner_ad_id_1 ? '#22C55E' : '#555' }}>{video.banner_ad_id_1 ? '✓ Set' : 'None'}</span></span>
-                                            <span>Banner 2: <span style={{ color: video.banner_ad_id_2 ? '#22C55E' : '#555' }}>{video.banner_ad_id_2 ? '✓ Set' : 'None'}</span></span>
                                         </div>
                                     </div>
 
@@ -400,11 +441,9 @@ export default function AdminAdsPage() {
                                         </p>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12, marginBottom: 16 }}>
                                             {([
-                                                { key: 'preroll1', label: '🎬 Pre-Roll Ad 1', placeholder: 'Ad ID (video type)' },
-                                                { key: 'preroll2', label: '🎬 Pre-Roll Ad 2', placeholder: 'Ad ID (video type)' },
-                                                { key: 'banner1', label: '🖼 Banner Ad 1', placeholder: 'Ad ID (banner type)' },
-                                                { key: 'banner2', label: '🖼 Banner Ad 2', placeholder: 'Ad ID (banner type)' },
-                                            ] as const).map(({ key, label, placeholder }) => (
+                                                { key: 'preroll1' as const, label: '🎬 Pre-Roll Ad 1', placeholder: 'Ad ID (video type)' },
+                                                { key: 'preroll2' as const, label: '🎬 Pre-Roll Ad 2', placeholder: 'Ad ID (video type)' },
+                                            ]).map(({ key, label, placeholder }) => (
                                                 <div key={key}>
                                                     <label style={{ display: 'block', fontSize: 11, color: '#aaa', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                         {label}
