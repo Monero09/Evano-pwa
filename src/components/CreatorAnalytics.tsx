@@ -14,11 +14,19 @@ export default function CreatorAnalytics({ myVideos, totalViews }: CreatorAnalyt
         .sort((a, b) => (b.views || 0) - (a.views || 0))
         .slice(0, 3);
 
-    // Generate mock chart data for last 7 days
-    const chartData = Array.from({ length: 7 }, (_, i) => ({
-        day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-        views: Math.floor(Math.random() * (totalViews / 7) * 1.5) // Mock data based on avg
-    }));
+    // Generate stable deterministic mock chart data for the last 7 days
+    const chartData = Array.from({ length: 7 }, (_, i) => {
+        const day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
+        if (totalViews === 0) return { day, views: 0 };
+
+        // Stable, realistic weekly view distribution curve
+        const curve = [0.1, 0.15, 0.12, 0.18, 0.25, 0.15, 0.05];
+        // Assume around 20% of total views happened in the last 7 days, scaling smoothly
+        const weeklyEstimate = Math.min(totalViews, Math.max(10, Math.floor(totalViews * 0.2)));
+        const views = Math.floor(weeklyEstimate * curve[i]);
+
+        return { day, views: views || (i === 4 ? 1 : 0) }; // ensure at least 1 view if totalViews > 0
+    });
 
     const maxChartValue = Math.max(...chartData.map(d => d.views), 1);
 
