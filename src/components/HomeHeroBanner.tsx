@@ -60,11 +60,12 @@ export default function HomeHeroBanner({ ads }: Props) {
                         inset: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',   /* show full frame, no cropping */
                         objectPosition: 'center',
                         opacity: fading ? 0 : 1,
                         transition: 'opacity 0.28s ease',
                         display: 'block',
+                        background: '#000',     /* letterbox bars are black */
                     }}
                 />
             ) : (
@@ -86,20 +87,24 @@ export default function HomeHeroBanner({ ads }: Props) {
                 />
             )}
 
-            {/* ── Cinematic gradient overlays ── */}
-            <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(135deg, rgba(11,15,25,0.65) 0%, transparent 60%)',
-                pointerEvents: 'none',
-            }} />
-            <div style={{
-                position: 'absolute',
-                bottom: 0, left: 0, right: 0,
-                height: '60%',
-                background: 'linear-gradient(to top, rgba(11,15,25,0.85), transparent)',
-                pointerEvents: 'none',
-            }} />
+            {/* ── Gradient overlays (images only — videos don't need them) ── */}
+            {!isVideoUrl(ad.url) && (
+                <>
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(135deg, rgba(11,15,25,0.65) 0%, transparent 60%)',
+                        pointerEvents: 'none',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        bottom: 0, left: 0, right: 0,
+                        height: '60%',
+                        background: 'linear-gradient(to top, rgba(11,15,25,0.85), transparent)',
+                        pointerEvents: 'none',
+                    }} />
+                </>
+            )}
 
             {/* ── Content overlay ── */}
             <div className="hero-content">
