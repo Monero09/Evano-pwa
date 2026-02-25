@@ -156,7 +156,7 @@ export async function uploadVideo(
             category_id: categoryData.id,
             video_url: finalVideoUrl,   // R2 public CDN URL
             thumbnail_url: thumbnailUrl,
-            status: 'approved',         // set to 'pending' to require admin approval
+            status: 'pending',          // requires admin approval before going live
             uploader_id: userId,        // NOT NULL — required
             created_by: userId,         // backward compat
             view_count: 0,

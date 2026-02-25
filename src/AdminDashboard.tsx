@@ -22,6 +22,9 @@ export default function AdminDashboard() {
     // Toast State
     const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
 
+    // Preview Modal State
+    const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
@@ -33,6 +36,13 @@ export default function AdminDashboard() {
             loadCategories();
         }
     }, [user, role]);
+
+    // Close preview modal on Escape key
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewVideoUrl(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
 
     const loadCategories = async () => {
         setCatLoading(true);
@@ -281,11 +291,26 @@ export default function AdminDashboard() {
                                             Approve
                                         </button>
                                     </div>
-                                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <a href={vid.video_url} target="_blank" rel="noopener noreferrer" style={{ color: '#D60074', fontSize: 13, textDecoration: 'none', fontWeight: 'bold' }}>Preview Video</a>
+                                    <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                                        <button
+                                            onClick={() => setPreviewVideoUrl(vid.video_url)}
+                                            style={{
+                                                flex: 1,
+                                                background: 'linear-gradient(135deg, #581c87, #D60074)',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '8px',
+                                                borderRadius: 4,
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                fontSize: 13,
+                                            }}
+                                        >
+                                            ▶ Watch
+                                        </button>
                                         <button
                                             onClick={() => handleDeleteVideo(vid.id, vid.title, true)}
-                                            style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                            style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' }}
                                         >
                                             Delete
                                         </button>
@@ -562,7 +587,99 @@ export default function AdminDashboard() {
                     from { opacity: 0; transform: translateY(-10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
+                @keyframes modalIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to   { opacity: 1; transform: scale(1); }
+                }
             `}</style>
+
+            {/* ── Video Preview Modal ── */}
+            {previewVideoUrl && (
+                <div
+                    onClick={() => setPreviewVideoUrl(null)}
+                    style={{
+                        position: 'fixed', inset: 0,
+                        background: 'rgba(0,0,0,0.88)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                        backdropFilter: 'blur(6px)',
+                    }}
+                >
+                    {/* Stop click inside from closing */}
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'relative',
+                            width: '100%',
+                            maxWidth: 900,
+                            animation: 'modalIn 0.2s ease',
+                        }}
+                    >
+                        {/* Close button */}
+                        <button
+                            onClick={() => setPreviewVideoUrl(null)}
+                            style={{
+                                position: 'absolute',
+                                top: -16,
+                                right: -16,
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                background: '#D60074',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: 20,
+                                lineHeight: 1,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 1,
+                                boxShadow: '0 4px 16px rgba(214,0,116,0.5)',
+                            }}
+                            aria-label="Close preview"
+                        >
+                            ✕
+                        </button>
+
+                        {/* Video player */}
+                        <video
+                            src={previewVideoUrl}
+                            controls
+                            autoPlay
+                            playsInline
+                            style={{
+                                width: '100%',
+                                borderRadius: 12,
+                                boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
+                                display: 'block',
+                                maxHeight: '80vh',
+                                background: '#000',
+                            }}
+                        />
+
+                        {/* Video title strip */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.6)',
+                            backdropFilter: 'blur(8px)',
+                            padding: '10px 16px',
+                            borderRadius: '0 0 12px 12px',
+                            marginTop: -4,
+                            fontSize: 13,
+                            color: '#ccc',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                        }}>
+                            <span>Admin Preview — <strong style={{ color: 'white' }}>not yet live</strong></span>
+                            <span style={{ fontSize: 11, color: '#888' }}>Press ESC to close</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
