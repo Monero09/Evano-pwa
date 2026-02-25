@@ -4,6 +4,7 @@ import { getPendingVideos, updateVideoStatus, getCategories, createCategory, del
 import type { Category } from './lib/api';
 import { supabase } from './lib/supabase';
 import type { Video } from './lib/types';
+import ConfirmModal from './components/ConfirmModal';
 
 export default function AdminDashboard() {
     const { user, role, loading } = useAuth();
@@ -24,6 +25,15 @@ export default function AdminDashboard() {
 
     // Preview Modal State
     const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+
+    // Confirm Modal — single shared modal, action stored in pendingAction
+    type PendingAction = {
+        title: string;
+        message: string;
+        confirmText: string;
+        action: () => Promise<void>;
+    };
+    const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToast({ msg, type });
@@ -67,15 +77,17 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleDeleteCategory = async (id: string, name: string) => {
-        if (!window.confirm(`Delete category "${name}"? Videos using it may lose their category.`)) return;
-        try {
-            await deleteCategory(id);
-            await loadCategories();
-            showToast('Category deleted.', 'success');
-        } catch (err: any) {
-            showToast(err.message || 'Failed to delete category', 'error');
-        }
+    const handleDeleteCategory = (id: string, name: string) => {
+        setPendingAction({
+            title: 'Delete Category',
+            message: `Delete "${name}"? Videos using this category may lose their classification.`,
+            confirmText: 'Yes, Delete',
+            action: async () => {
+                await deleteCategory(id);
+                await loadCategories();
+                showToast('Category deleted.', 'success');
+            },
+        });
     };
 
     const loadVideos = async () => {
@@ -111,21 +123,21 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleDeleteVideo = async (id: string, title: string, isPending: boolean) => {
-        if (!window.confirm(`Are you sure you want to completely delete "${title}"? This cannot be undone.`)) return;
-
-        try {
-            await deleteVideo(id);
-            if (isPending) {
-                setPendingVideos(prev => prev.filter(v => v.id !== id));
-            } else {
-                setApprovedVideos(prev => prev.filter(v => v.id !== id));
-            }
-            showToast('Video deleted successfully', 'success');
-        } catch (error: any) {
-            console.error('Delete error:', error);
-            showToast(error.message || 'Failed to delete video', 'error');
-        }
+    const handleDeleteVideo = (id: string, title: string, isPending: boolean) => {
+        setPendingAction({
+            title: 'Delete Video',
+            message: `Are you sure you want to permanently delete "${title}"? This removes the video file and cannot be undone.`,
+            confirmText: 'Yes, Delete Forever',
+            action: async () => {
+                await deleteVideo(id);
+                if (isPending) {
+                    setPendingVideos(prev => prev.filter(v => v.id !== id));
+                } else {
+                    setApprovedVideos(prev => prev.filter(v => v.id !== id));
+                }
+                showToast('Video deleted successfully', 'success');
+            },
+        });
     };
 
     const handleSetFeatured = async (videoId: string) => {
@@ -680,6 +692,26 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* ── Confirm / Destructive Action Modal ── */}
+            <ConfirmModal
+                isOpen={!!pendingAction}
+                title={pendingAction?.title ?? ''}
+                message={pendingAction?.message ?? ''}
+                confirmText={pendingAction?.confirmText ?? 'Confirm'}
+                isDestructive
+                onCancel={() => setPendingAction(null)}
+                onConfirm={async () => {
+                    if (!pendingAction) return;
+                    try {
+                        await pendingAction.action();
+                    } catch (err: any) {
+                        showToast(err.message || 'Action failed', 'error');
+                    } finally {
+                        setPendingAction(null);
+                    }
+                }}
+            />
         </div>
     );
 }
