@@ -254,7 +254,11 @@ export async function getMyVideos(userId: string): Promise<Video[]> {
             console.error("Fetch my videos error:", error.message);
             return [];
         }
-        return (data || []) as Video[];
+        // Map database view_count to views for frontend compatibility
+        return (data || []).map((video: any) => ({
+            ...video,
+            views: video.view_count || 0,
+        })) as Video[];
     } catch (e) {
         console.error("Fetch my videos error:", e);
         return [];
