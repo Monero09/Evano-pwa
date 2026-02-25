@@ -21,6 +21,16 @@ interface Props {
 export default function HomeHeroBanner({ ads }: Props) {
     const [idx, setIdx] = useState(0);
     const [fading, setFading] = useState(false);
+    // Aspect ratio of the currently loaded video (e.g. '16 / 9')
+    // null = use the .hero fixed height (420px) — applies to images
+    const [videoRatio, setVideoRatio] = useState<string | null>(null);
+
+    const handleVideoMeta = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        const v = e.currentTarget;
+        if (v.videoWidth && v.videoHeight) {
+            setVideoRatio(`${v.videoWidth} / ${v.videoHeight}`);
+        }
+    };
 
     const crossfadeTo = useCallback((next: number) => {
         setFading(true);
@@ -39,12 +49,31 @@ export default function HomeHeroBanner({ ads }: Props) {
         return () => clearInterval(id);
     }, [ads.length, crossfadeTo]);
 
+    // Reset ratio when the slot changes so images don't inherit a video ratio
+    const prevIsVideo = isVideoUrl(ads[idx]?.url ?? '');
+    useEffect(() => {
+        if (!prevIsVideo) setVideoRatio(null);
+    }, [idx, prevIsVideo]);
+
     if (ads.length === 0) return null;
 
     const ad = ads[idx];
 
     return (
-        <div className="hero">
+        /*
+         * Override .hero's fixed height only when we know the video's ratio.
+         * aspectRatio + height:auto makes the box resize to fit the content exactly.
+         * maxHeight/minHeight guard against extreme portrait or ultra-wide videos.
+         */
+        <div
+            className="hero"
+            style={videoRatio ? {
+                height: 'auto',
+                aspectRatio: videoRatio,
+                maxHeight: 560,
+                minHeight: 180,
+            } : undefined}
+        >
 
             {/* ── Full-bleed background: video OR image ── */}
             {isVideoUrl(ad.url) ? (
@@ -55,17 +84,17 @@ export default function HomeHeroBanner({ ads }: Props) {
                     muted
                     loop
                     playsInline
+                    onLoadedMetadata={handleVideoMeta}
                     style={{
                         position: 'absolute',
                         inset: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain',   /* show full frame, no cropping */
+                        objectFit: 'cover', /* container matches ratio → no bars, no crop */
                         objectPosition: 'center',
                         opacity: fading ? 0 : 1,
                         transition: 'opacity 0.28s ease',
                         display: 'block',
-                        background: '#000',     /* letterbox bars are black */
                     }}
                 />
             ) : (
