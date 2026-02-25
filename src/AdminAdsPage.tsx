@@ -54,7 +54,7 @@ export default function AdminAdsPage() {
     const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
     // Realtime: use a ref so the subscription callback always has the latest loadData
-    const loadDataRef = useRef<() => Promise<void>>();
+    const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
     const loadData = async () => {
         setLoading(true);
