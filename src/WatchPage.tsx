@@ -251,6 +251,8 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                 <div
                     className={`custom-controls ${showControls ? 'visible' : 'hidden'}`}
                     onClick={e => e.stopPropagation()}
+                    onTouchEnd={e => e.stopPropagation()}
+                    onPointerDown={e => e.stopPropagation()}
                     style={{
                         position: 'absolute', inset: 0,
                         display: 'flex', flexDirection: 'column',
