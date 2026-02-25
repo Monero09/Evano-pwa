@@ -54,13 +54,10 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
     useEffect(() => {
         const node = containerRef.current;
         const onMove = () => revealControls();
-        const onTouch = () => revealControls();
         node?.addEventListener('mousemove', onMove);
-        node?.addEventListener('touchstart', onTouch, { passive: true });
         scheduleHide.current();
         return () => {
             node?.removeEventListener('mousemove', onMove);
-            node?.removeEventListener('touchstart', onTouch);
             if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,7 +118,11 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
         if ((e.target as HTMLElement).closest('.custom-controls')) return;
 
         // Simply toggle the controls on/off
-        setShowControls(prev => !prev);
+        setShowControls(prev => {
+            const next = !prev;
+            if (next) scheduleHide.current();
+            return next;
+        });
     };
 
     // ── Progress bar: mouse click ─────────────────────────────────────
@@ -201,7 +202,6 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
             ref={containerRef}
             className="custom-player-container"
             onClick={handleScreenTap}
-            onTouchEnd={handleScreenTap}
             style={{
                 position: 'relative',
                 width: '100%',

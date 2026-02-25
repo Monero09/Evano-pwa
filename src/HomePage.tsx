@@ -70,11 +70,8 @@ export default function HomePage() {
     // Hero is driven by banner ads; only show featured video when no ads assigned
     const hasBannerAds = !bannerLoading && bannerAds.length > 0;
 
-    const movies = videos.filter(v => v.category === 'Movies');
-    const music = videos.filter(v => v.category === 'Music');
-    const podcast = videos.filter(v => v.category === 'Podcast');
-    const documentary = videos.filter(v => v.category === 'Documentary');
-    const skitVideo = videos.filter(v => v.category === 'Skit video');
+    // Get all unique categories that actually have videos
+    const activeCategories = Array.from(new Set(videos.map(v => v.category))).filter(Boolean) as string[];
 
     if (loading && !videos.length) return (
         <div style={{ marginTop: 70, paddingTop: 20 }}>
@@ -177,12 +174,10 @@ export default function HomePage() {
                     </>
                 )}
 
-                {/* Category Rows */}
-                <VideoRow title="Movies" list={movies} />
-                <VideoRow title="Music" list={music} />
-                <VideoRow title="Podcast" list={podcast} />
-                <VideoRow title="Documentary" list={documentary} />
-                <VideoRow title="Skit video" list={skitVideo} />
+                {/* Category Rows (Dynamically generated built from active categories) */}
+                {activeCategories.map(cat => (
+                    <VideoRow key={cat} title={cat} list={videos.filter(v => v.category === cat)} />
+                ))}
 
                 {videos.length === 0 && !loading && (
                     <p style={{ color: '#888', textAlign: 'center', marginTop: 40 }}>No videos available.</p>

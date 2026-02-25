@@ -37,7 +37,11 @@ export default function CreatorDashboard() {
             });
         }
         // Load categories dynamically
-        getCategories().then(cats => setCategories(cats.map(c => c.name)));
+        getCategories().then(cats => {
+            const catNames = cats.map(c => c.name);
+            setCategories(catNames);
+            setCategory(prev => catNames.includes(prev) ? prev : (catNames.length > 0 ? catNames[0] : ''));
+        });
     }, [user]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'video' | 'thumb') => {
