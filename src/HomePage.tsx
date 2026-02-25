@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './components/AuthProvider';
 import { useToast } from './components/Toast';
-import { fetchVideos, getWatchLater, getWatchHistory, getRecommendations } from './lib/api';
-import type { Video } from './lib/types';
+import { fetchVideos, getWatchLater, getWatchHistory, getRecommendations, getGlobalBannerAds } from './lib/api';
+import type { Video, Ad } from './lib/types';
 import HomeHeroBanner from './components/HomeHeroBanner';
 
 export default function HomePage() {
@@ -16,7 +16,10 @@ export default function HomePage() {
     const [recommendations, setRecommendations] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Helper function to format duration
+    // Banner ads — fetched separately so we can drive the hero conditional
+    const [bannerAds, setBannerAds] = useState<Ad[]>([]);
+    const [bannerLoading, setBannerLoading] = useState(true);
+
     const formatDuration = (seconds?: number | null) => {
         if (!seconds) return '';
         const mins = Math.floor(seconds / 60);
@@ -28,14 +31,18 @@ export default function HomePage() {
         loadData();
     }, [user]);
 
+    // Fetch banner ads once on mount (independent of user/videos)
+    useEffect(() => {
+        getGlobalBannerAds()
+            .then(setBannerAds)
+            .finally(() => setBannerLoading(false));
+    }, []);
+
     const loadData = async () => {
         setLoading(true);
-
         try {
-            // fetchVideos now includes is_featured sorting
             const allVideos = await fetchVideos();
             setVideos(allVideos);
-
             if (user) {
                 const [wl, hist, rec] = await Promise.all([
                     getWatchLater(user.id),
@@ -54,18 +61,15 @@ export default function HomePage() {
         }
     };
 
-    const handleWatch = (id: string) => {
-        navigate(`/watch/${id}`);
-    };
+    const handleWatch = (id: string) => navigate(`/watch/${id}`);
+    const handleSearch = () => navigate('/search');
 
-    const handleSearch = () => {
-        navigate('/search');
-    };
-
-    // Hero Banner: the single featured video (is_featured === true)
+    // Featured video — only used as hero fallback when no banner ads
     const heroVideo = videos.find(v => v.is_featured === true) || (videos.length > 0 ? videos[0] : null);
 
-    // Netflix-style rows: fetch once, filter in memory (no extra API calls)
+    // Hero is driven by banner ads; only show featured video when no ads assigned
+    const hasBannerAds = !bannerLoading && bannerAds.length > 0;
+
     const movies = videos.filter(v => v.category === 'Movies');
     const music = videos.filter(v => v.category === 'Music');
     const podcast = videos.filter(v => v.category === 'Podcast');
@@ -127,31 +131,38 @@ export default function HomePage() {
 
             {/* Main Content */}
             <div className="container">
-                {/* ── Hero Ad Banner — in document flow, scrolls naturally ── */}
-                <HomeHeroBanner />
 
-                {/* Hero Section */}
-                {heroVideo && (
-                    <div className="hero">
-                        <div className="hero-background" style={{
-                            backgroundImage: `linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.6)), url('${heroVideo.thumbnail_url}')`
-                        }}></div>
-                        <div className="hero-content">
-                            <span className="hero-label">Featured</span>
-                            <h1 className="hero-title">{heroVideo.title}</h1>
-                            <p className="hero-subtitle">{heroVideo.description}</p>
-                            <button className="hero-button" onClick={() => handleWatch(heroVideo.id)}>Watch Now</button>
-                            {user && (
-                                <button
-                                    className="hero-button"
-                                    style={{ background: 'rgba(255,255,255,0.2)', marginLeft: 10 }}
-                                    onClick={() => handleWatch(heroVideo.id)}
-                                >
-                                    + My List
-                                </button>
-                            )}
+                {/*
+                  ── Hero slot ──────────────────────────────────────────────
+                  Priority: banner ads > featured video.
+                  • hasBannerAds → show the ad carousel in the hero shell
+                  • no ads       → show the featured video hero as normal
+                */}
+                {hasBannerAds ? (
+                    <HomeHeroBanner ads={bannerAds} />
+                ) : (
+                    heroVideo && (
+                        <div className="hero">
+                            <div className="hero-background" style={{
+                                backgroundImage: `linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.6)), url('${heroVideo.thumbnail_url}')`
+                            }}></div>
+                            <div className="hero-content">
+                                <span className="hero-label">Featured</span>
+                                <h1 className="hero-title">{heroVideo.title}</h1>
+                                <p className="hero-subtitle">{heroVideo.description}</p>
+                                <button className="hero-button" onClick={() => handleWatch(heroVideo.id)}>Watch Now</button>
+                                {user && (
+                                    <button
+                                        className="hero-button"
+                                        style={{ background: 'rgba(255,255,255,0.2)', marginLeft: 10 }}
+                                        onClick={() => handleWatch(heroVideo.id)}
+                                    >
+                                        + My List
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )
                 )}
 
                 {/* Feature Strip */}
