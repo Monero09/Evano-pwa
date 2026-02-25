@@ -90,7 +90,7 @@ export default function CreatorDashboard() {
     };
 
     return (
-        <div className="dashboard-container" style={{ padding: 20, maxWidth: 1000, margin: '0 auto', color: 'white', marginTop: 'calc(70px + var(--ad-banner-h, 0px))', transition: 'margin-top 0.35s' }}>
+        <div className="dashboard-container" style={{ padding: 20, maxWidth: 1000, margin: '0 auto', color: 'white', marginTop: 70 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
                 <h1 className="page-title">Creator Studio</h1>
                 <button onClick={() => navigate('/')} className="btn-secondary">

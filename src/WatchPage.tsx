@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory, getAdById } from './lib/api';
+import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory } from './lib/api';
 import type { Video } from './lib/types';
 import { useAuth } from './components/AuthProvider';
 
@@ -11,11 +11,10 @@ import { useAuth } from './components/AuthProvider';
 type PlayerProps = {
     videoSrc: string;
     poster?: string;
-    preRollAdSrc?: string | null;
-    onViewCounted?: () => void; // fires once after 15 s of real playback
+    onViewCounted?: () => void;
 };
 
-function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: PlayerProps) {
+function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -24,11 +23,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: Pl
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
-
-    // Ad state
-    const [currentSrc, setCurrentSrc] = useState(preRollAdSrc || videoSrc);
-    const [isShowingAd, setIsShowingAd] = useState(!!preRollAdSrc);
-
     const hideTimerRef = useRef<number | null>(null);
 
     // ── 15-second view threshold ───────────────────────────────────────
@@ -39,21 +33,6 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: Pl
     const viewCountedRef = useRef(false);            // fire callback only once
     const VIEW_THRESHOLD = 15; // seconds
 
-
-    // ── Prop-change reset ─────────────────────────────────────────────
-    useEffect(() => {
-        setCurrentSrc(preRollAdSrc || videoSrc);
-        setIsShowingAd(!!preRollAdSrc);
-    }, [videoSrc, preRollAdSrc]);
-
-    // ── Ad-end handler ────────────────────────────────────────────────
-    const handleVideoEnded = () => {
-        if (isShowingAd) {
-            setCurrentSrc(videoSrc);
-            setIsShowingAd(false);
-            setTimeout(() => { videoRef.current?.play(); }, 50);
-        }
-    };
 
     // ── Auto-hide controls ────────────────────────────────────────────
     // Use a stable ref so event-listener callbacks always see the latest version
@@ -95,11 +74,10 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: Pl
         const onTime = () => {
             setCurrentTime(video.currentTime);
 
-            // ── Accumulate real playback time (not ad time, not paused time) ──
-            if (!isShowingAd && !video.paused && !viewCountedRef.current) {
+            // Accumulate real playback seconds for view threshold
+            if (!video.paused && !viewCountedRef.current) {
                 if (lastTimeRef.current !== null) {
                     const delta = video.currentTime - lastTimeRef.current;
-                    // Only count forward, small steps (guards against seeking)
                     if (delta > 0 && delta < 2) {
                         playedSecondsRef.current += delta;
                         if (playedSecondsRef.current >= VIEW_THRESHOLD) {
@@ -109,9 +87,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: Pl
                     }
                 }
                 lastTimeRef.current = video.currentTime;
-            } else if (video.paused || isShowingAd) {
-                // Reset last-seen time when paused / ad playing so delta
-                // doesn't spike when playback resumes
+            } else if (video.paused) {
                 lastTimeRef.current = null;
             }
         };
@@ -248,35 +224,17 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, onViewCounted }: Pl
                 {/* ── <video> — pointer-events:none, container handles all input ── */}
                 <video
                     ref={videoRef}
-                    src={currentSrc}
-                    poster={isShowingAd ? undefined : poster}
+                    src={videoSrc}
+                    poster={poster}
                     playsInline
-                    onEnded={handleVideoEnded}
                     style={{
                         position: 'absolute', top: 0, left: 0,
                         width: '100%', height: '100%',
                         objectFit: 'contain',
-                        pointerEvents: 'none', // ← critical: hands all events to container
+                        pointerEvents: 'none',
                     }}
                 />
 
-                {/* ── "Ad playing" badge ── */}
-                {isShowingAd && (
-                    <div style={{
-                        position: 'absolute', top: 12, right: 12,
-                        background: 'rgba(0,0,0,0.65)',
-                        color: 'rgba(255,255,255,0.85)',
-                        fontSize: 11, fontWeight: 600,
-                        letterSpacing: '0.05em',
-                        padding: '4px 10px', borderRadius: 4,
-                        backdropFilter: 'blur(6px)',
-                        border: '1px solid rgba(34, 197, 94, 0.4)',
-                        zIndex: 30, pointerEvents: 'none',
-                        textTransform: 'uppercase',
-                    }}>
-                        Ad playing…
-                    </div>
-                )}
 
 
                 {/* ═══════════════════════════════════════════════════════════
@@ -518,7 +476,6 @@ export default function WatchPage() {
     const { user } = useAuth();
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
-    const [adUrl, setAdUrl] = useState<string | null>(null);
     const [inMyList, setInMyList] = useState(false);
 
     useEffect(() => {
@@ -541,25 +498,6 @@ export default function WatchPage() {
         if (user) {
             addToHistory(user.id, video.id);
             checkInWatchLater(user.id, video.id).then(setInMyList);
-        }
-
-        // 2. Load ads for all viewers — AVOD model (no premium skip, no ads on YouTube links)
-        const isYouTube = video.video_url &&
-            (video.video_url.includes('youtube.com') || video.video_url.includes('youtu.be'));
-
-        if (video.ads_enabled && !isYouTube) {
-            // Inner async IIFE so we can use await inside a sync useEffect
-            (async () => {
-                const prerollIds = [video.preroll_ad_id, video.preroll_ad_id_2].filter(Boolean) as string[];
-                const pickedPrerollId = prerollIds.length
-                    ? prerollIds[Math.floor(Math.random() * prerollIds.length)]
-                    : null;
-
-                const prerollAd = await (pickedPrerollId ? getAdById(pickedPrerollId) : Promise.resolve(null));
-                setAdUrl(prerollAd && prerollAd.type === 'video' ? prerollAd.url : null);
-            })();
-        } else {
-            setAdUrl(null);
         }
     }, [video, user]);
 
@@ -597,9 +535,7 @@ export default function WatchPage() {
                     <CustomVideoPlayer
                         videoSrc={video.video_url}
                         poster={video.thumbnail_url}
-                        preRollAdSrc={adUrl}
                         onViewCounted={() => {
-                            // Called exactly once after 15 s of real playback
                             import('./lib/api').then(mod => mod.incrementView(video.id));
                         }}
                     />

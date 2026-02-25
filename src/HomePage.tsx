@@ -4,6 +4,7 @@ import { useAuth } from './components/AuthProvider';
 import { useToast } from './components/Toast';
 import { fetchVideos, getWatchLater, getWatchHistory, getRecommendations } from './lib/api';
 import type { Video } from './lib/types';
+import HomeHeroBanner from './components/HomeHeroBanner';
 
 export default function HomePage() {
     const navigate = useNavigate();
@@ -72,7 +73,7 @@ export default function HomePage() {
     const skitVideo = videos.filter(v => v.category === 'Skit video');
 
     if (loading && !videos.length) return (
-        <div style={{ marginTop: 'calc(70px + var(--ad-banner-h, 0px))', paddingTop: 20, transition: 'margin-top 0.35s' }}>
+        <div style={{ marginTop: 70, paddingTop: 20 }}>
             <div className="container">
                 <div className="videos-row">
                     {[...Array(5)].map((_, i) => (
@@ -126,6 +127,9 @@ export default function HomePage() {
 
             {/* Main Content */}
             <div className="container">
+                {/* ── Hero Ad Banner — in document flow, scrolls naturally ── */}
+                <HomeHeroBanner />
+
                 {/* Hero Section */}
                 {heroVideo && (
                     <div className="hero">
