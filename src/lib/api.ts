@@ -345,6 +345,14 @@ export async function getAds(type?: 'video' | 'banner'): Promise<Ad[]> {
     }
 }
 
+export async function deleteAd(adId: string): Promise<void> {
+    const { error } = await supabase
+        .from('ads')
+        .delete()
+        .eq('id', adId);
+    if (error) throw new Error(`Failed to delete ad: ${error.message}`);
+}
+
 export async function assignAdsToVideo(
     videoId: string,
     ads: {
