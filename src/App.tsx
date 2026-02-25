@@ -12,9 +12,6 @@ import AuthGuard from './components/AuthGuard';
 import Sidebar from './components/Sidebar';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Constants
-const INSTALL_PROMPT_DELAY = 60000; // 60 seconds
-
 // Type for PWA install prompt
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -34,11 +31,8 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
             const event = e as BeforeInstallPromptEvent;
             event.preventDefault();
             setDeferredPrompt(event);
-
-            // Show prompt after delay
-            setTimeout(() => {
-                setShowInstall(true);
-            }, INSTALL_PROMPT_DELAY);
+            // Show banner immediately — no delay, event fires only once
+            setShowInstall(true);
         };
         window.addEventListener('beforeinstallprompt', handler);
         return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -47,10 +41,9 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
     const handleInstall = async () => {
         if (!deferredPrompt) return;
         deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setShowInstall(false);
-        }
+        await deferredPrompt.userChoice;
+        // Hide banner regardless of accept or dismiss
+        setShowInstall(false);
         setDeferredPrompt(null);
     };
 
