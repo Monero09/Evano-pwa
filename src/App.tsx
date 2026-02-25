@@ -11,7 +11,6 @@ import AdminAdsPage from './AdminAdsPage';
 import AuthGuard from './components/AuthGuard';
 import Sidebar from './components/Sidebar';
 import ErrorBoundary from './components/ErrorBoundary';
-import SplashScreen from './components/SplashScreen';
 
 // Type for PWA install prompt
 interface BeforeInstallPromptEvent extends Event {
@@ -67,11 +66,8 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
-    const [showSplash, setShowSplash] = React.useState(true);
-
     return (
         <ErrorBoundary>
-            {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
             <Router>
                 <PageTransition>
                     <Routes>
