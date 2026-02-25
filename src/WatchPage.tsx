@@ -280,7 +280,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
                         letterSpacing: '0.05em',
                         padding: '4px 10px', borderRadius: 4,
                         backdropFilter: 'blur(6px)',
-                        border: '1px solid rgba(214,0,116,0.4)',
+                        border: '1px solid rgba(34, 197, 94, 0.4)',
                         zIndex: 30, pointerEvents: 'none',
                         textTransform: 'uppercase',
                     }}>
@@ -297,7 +297,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
                         animation: 'slideInLeft 0.5s ease-out',
                         zIndex: 20,
                         boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-                        border: '1px solid rgba(214,0,116,0.35)',
+                        border: '1px solid rgba(34, 197, 94, 0.35)',
                     }}>
                         <button
                             onClick={e => { e.stopPropagation(); setShowBannerAd(false); }}
@@ -418,7 +418,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
                                 {/* Filled portion */}
                                 <div style={{
                                     width: `${pct}%`, height: '100%',
-                                    background: 'linear-gradient(90deg, #D60074, #db2777)',
+                                    background: 'linear-gradient(90deg, #22C55E, #16A34A)',
                                     borderRadius: 3,
                                     transition: 'width 0.1s linear',
                                 }} />
@@ -543,12 +543,12 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
                     -webkit-tap-highlight-color: transparent;
                 }
                 .seek-btn:hover {
-                    background: rgba(214, 0, 116, 0.45);
-                    border-color: rgba(214, 0, 116, 0.7);
+                    background: rgba(34, 197, 94, 0.15);
+                    border-color: rgba(34, 197, 94, 0.1);
                 }
                 .seek-btn:active {
                     transform: scale(0.92);
-                    background: rgba(214, 0, 116, 0.65);
+                    background: rgba(34, 197, 94, 0.65);
                 }
             `}</style>
         </div>
@@ -562,7 +562,7 @@ function CustomVideoPlayer({ videoSrc, poster, preRollAdSrc, bannerAdSrc, onView
 export default function WatchPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, tier } = useAuth();
+    const { user } = useAuth();
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
     const [adUrl, setAdUrl] = useState<string | null>(null);
@@ -591,11 +591,11 @@ export default function WatchPage() {
             checkInWatchLater(user.id, video.id).then(setInMyList);
         }
 
-        // 2. Load ads for non-premium users (no ads on YouTube links)
+        // 2. Load ads for all viewers — AVOD model (no premium skip, no ads on YouTube links)
         const isYouTube = video.video_url &&
             (video.video_url.includes('youtube.com') || video.video_url.includes('youtu.be'));
 
-        if (tier !== 'premium' && video.ads_enabled && !isYouTube) {
+        if (video.ads_enabled && !isYouTube) {
             // Inner async IIFE so we can use await inside a sync useEffect
             (async () => {
                 // --- Pre-roll: pick one at random from up to 2 slots ---
@@ -623,7 +623,7 @@ export default function WatchPage() {
             setAdUrl(null);
             setBannerAdUrl(null);
         }
-    }, [video, tier, user]);
+    }, [video, user]);
 
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
 
@@ -698,7 +698,7 @@ export default function WatchPage() {
                                 marginTop: 0,
                                 transition: 'all 0.2s ease',
                                 color: 'white',
-                                boxShadow: inMyList ? '0 4px 16px rgba(214, 0, 116, 0.3)' : 'none',
+                                boxShadow: inMyList ? '0 4px 16px rgba(34, 197, 94, 0.3)' : 'none',
                                 flexShrink: 0
                             }}
                             title={inMyList ? 'Remove from My List' : 'Add to My List'}

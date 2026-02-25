@@ -70,13 +70,13 @@ export default function ConfirmModal({
                     borderRadius: '50%',
                     background: isDestructive
                         ? 'rgba(255, 77, 79, 0.12)'
-                        : 'rgba(214, 0, 116, 0.12)',
+                        : 'rgba(34, 197, 94, 0.12)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: 24,
                     marginBottom: 20,
-                    border: `1px solid ${isDestructive ? 'rgba(255,77,79,0.25)' : 'rgba(214,0,116,0.25)'}`,
+                    border: `1px solid ${isDestructive ? 'rgba(255,77,79,0.25)' : 'rgba(34,197,94,0.25)'}`,
                 }}>
                     {isDestructive ? '🗑' : '⚠️'}
                 </div>
@@ -141,7 +141,7 @@ export default function ConfirmModal({
                             border: 'none',
                             background: isDestructive
                                 ? 'linear-gradient(135deg, #dc2626, #ff4d4f)'
-                                : 'linear-gradient(135deg, #581c87, #D60074)',
+                                : 'linear-gradient(135deg, #16A34A, #22C55E)',
                             color: 'white',
                             fontSize: 14,
                             fontWeight: 700,

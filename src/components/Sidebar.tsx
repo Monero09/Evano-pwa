@@ -8,13 +8,12 @@ import {
     Search,
     Video as VideoIcon,
     ShieldAlert,
-    Crown,
     LogOut
 } from 'lucide-react';
 
 export default function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
-    const { user, role, tier, logout } = useAuth();
+    const { user, role, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -25,7 +24,6 @@ export default function Sidebar() {
         { icon: Search, label: 'Search', path: '/search' },
         ...(role === 'creator' || role === 'admin' ? [{ icon: VideoIcon, label: 'Studio', path: '/creator' }] : []),
         ...(role === 'admin' ? [{ icon: ShieldAlert, label: 'Admin', path: '/admin' }] : []),
-        { icon: Crown, label: 'Premium', path: '/premium' }
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -109,7 +107,7 @@ export default function Sidebar() {
                                 padding: '12px 16px',
                                 borderRadius: '12px',
                                 background: isActive(item.path)
-                                    ? 'rgba(214, 0, 116, 0.15)' // Subtle purple tint
+                                    ? 'rgba(34, 197, 94, 0.3)' // Subtle purple tint
                                     : 'transparent',
                                 color: isActive(item.path) ? 'white' : '#B0B8C1',
                                 border: 'none',
@@ -132,7 +130,7 @@ export default function Sidebar() {
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20 }}>
                         {/* User Profile Info */}
                         <div style={{
-                            background: 'rgba(214, 0, 116, 0.1)',
+                            background: 'rgba(34, 197, 94, 0.1)',
                             padding: 12,
                             borderRadius: '12px',
                             marginBottom: 16,
@@ -141,20 +139,20 @@ export default function Sidebar() {
                             gap: 12,
                             cursor: 'pointer',
                             transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                            border: '1px solid rgba(214, 0, 116, 0.2)'
+                            border: '1px solid rgba(34, 197, 94, 0.2)'
                         }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(214, 0, 116, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(214, 0, 116, 0.4)';
-                            e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(214, 0, 116, 0.1)';
-                            e.currentTarget.style.borderColor = 'rgba(214, 0, 116, 0.2)';
-                            e.currentTarget.style.transform = 'translateX(0)';
-                        }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)';
+                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+                                e.currentTarget.style.transform = 'translateX(4px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                                e.currentTarget.style.transform = 'translateX(0)';
+                            }}
                         >
-                            <div className="user-avatar" style={{ width: 36, height: 36, fontSize: 14, transition: 'all 0.3s ease', boxShadow: '0 2px 8px rgba(214, 0, 116, 0.2)' }}>
+                            <div className="user-avatar" style={{ width: 36, height: 36, fontSize: 14, transition: 'all 0.3s ease', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.2)' }}>
                                 {user.email?.charAt(0).toUpperCase()}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -163,63 +161,13 @@ export default function Sidebar() {
                                     {user.email?.split('@')[0]}
                                 </div>
                                 <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                                    <span style={{ color: '#D60074', textTransform: 'capitalize', fontWeight: 600 }}>
+                                    <span style={{ color: '#22C55E', textTransform: 'capitalize', fontWeight: 600 }}>
                                         {role || 'viewer'}
                                     </span>
-                                    {tier === 'premium' && (
-                                        <span style={{
-                                            background: 'linear-gradient(to right, #ffd700, #ffed4e)',
-                                            color: '#000',
-                                            padding: '2px 6px',
-                                            borderRadius: 4,
-                                            fontSize: 10,
-                                            fontWeight: 700,
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            ⭐ PREMIUM
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Go Premium Option */}
-                        {role && role !== 'admin' && (
-                            <button
-                                onClick={() => handleNavigation('/premium')}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 12,
-                                    padding: '12px 16px',
-                                    width: '100%',
-                                    borderRadius: '12px',
-                                    background: 'rgba(214, 0, 116, 0.15)',
-                                    color: '#D60074',
-                                    border: '1px solid rgba(214, 0, 116, 0.3)',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                                    marginBottom: 8
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(214, 0, 116, 0.25)';
-                                    e.currentTarget.style.borderColor = 'rgba(214, 0, 116, 0.6)';
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(214, 0, 116, 0.2)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(214, 0, 116, 0.15)';
-                                    e.currentTarget.style.borderColor = 'rgba(214, 0, 116, 0.3)';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = 'none';
-                                }}
-                            >
-                                <Crown size={18} style={{ transition: 'transform 0.3s ease' }} />
-                                Go Premium
-                            </button>
-                        )}
 
                         {/* Sign Out */}
                         <button

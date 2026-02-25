@@ -28,37 +28,37 @@ export default function CreatorAnalytics({ myVideos, totalViews }: CreatorAnalyt
             <div className="stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
                 <div className="stat-card" style={{
                     background: 'rgba(26, 31, 46, 0.4)',
-                    border: '1px solid rgba(214, 0, 116, 0.2)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
                     borderRadius: 12,
                     padding: 20,
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}>
                     <div className="stat-label" style={{ fontSize: 12, color: '#B0B8C1', marginBottom: 8 }}>Total Views</div>
-                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#D60074', marginBottom: 8 }}>{totalViews.toLocaleString()}</div>
+                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>{totalViews.toLocaleString()}</div>
                     <div className="stat-change" style={{ fontSize: 11, color: '#888' }}>↗ Overall performance</div>
                 </div>
 
                 <div className="stat-card" style={{
                     background: 'rgba(26, 31, 46, 0.4)',
-                    border: '1px solid rgba(214, 0, 116, 0.2)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
                     borderRadius: 12,
                     padding: 20,
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}>
                     <div className="stat-label" style={{ fontSize: 12, color: '#B0B8C1', marginBottom: 8 }}>Total Videos</div>
-                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#D60074', marginBottom: 8 }}>{myVideos.length}</div>
+                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>{myVideos.length}</div>
                     <div className="stat-change" style={{ fontSize: 11, color: '#888' }}>Across all statuses</div>
                 </div>
 
                 <div className="stat-card" style={{
                     background: 'rgba(26, 31, 46, 0.4)',
-                    border: '1px solid rgba(214, 0, 116, 0.2)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
                     borderRadius: 12,
                     padding: 20,
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}>
                     <div className="stat-label" style={{ fontSize: 12, color: '#B0B8C1', marginBottom: 8 }}>Avg Views</div>
-                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#D60074', marginBottom: 8 }}>{avgViews.toLocaleString()}</div>
+                    <div className="stat-value" style={{ fontSize: 32, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>{avgViews.toLocaleString()}</div>
                     <div className="stat-change" style={{ fontSize: 11, color: '#888' }}>Per video</div>
                 </div>
             </div>
@@ -66,19 +66,19 @@ export default function CreatorAnalytics({ myVideos, totalViews }: CreatorAnalyt
             {/* Views Chart */}
             <div style={{
                 background: 'rgba(26, 31, 46, 0.4)',
-                border: '1px solid rgba(214, 0, 116, 0.2)',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
                 borderRadius: 12,
                 padding: 24,
                 marginBottom: 40
             }}>
-                <h3 style={{ fontSize: 16, marginBottom: 20, color: '#D60074' }}>Views Over Last 7 Days</h3>
+                <h3 style={{ fontSize: 16, marginBottom: 20, color: '#22C55E' }}>Views Over Last 7 Days</h3>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 200, justifyContent: 'space-around' }}>
                     {chartData.map((item) => {
                         const barHeight = (item.views / maxChartValue) * 150;
                         return (
                             <div key={item.day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
                                 <div style={{
-                                    background: 'linear-gradient(180deg, #D60074 0%, #8B004D 100%)',
+                                    background: 'linear-gradient(180deg, #22C55E 0%, #14532d 100%)',
                                     width: '100%',
                                     height: barHeight,
                                     borderRadius: '6px 6px 0 0',
@@ -95,11 +95,11 @@ export default function CreatorAnalytics({ myVideos, totalViews }: CreatorAnalyt
             {topVideos.length > 0 && (
                 <div style={{
                     background: 'rgba(26, 31, 46, 0.4)',
-                    border: '1px solid rgba(214, 0, 116, 0.2)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
                     borderRadius: 12,
                     padding: 24
                 }}>
-                    <h3 style={{ fontSize: 16, marginBottom: 20, color: '#D60074' }}>Top Performing Videos</h3>
+                    <h3 style={{ fontSize: 16, marginBottom: 20, color: '#22C55E' }}>Top Performing Videos</h3>
                     <div style={{ display: 'grid', gap: 12 }}>
                         {topVideos.map((video, index) => (
                             <div key={video.id} style={{
@@ -107,15 +107,15 @@ export default function CreatorAnalytics({ myVideos, totalViews }: CreatorAnalyt
                                 gridTemplateColumns: '40px 1fr 100px',
                                 gap: 16,
                                 padding: 16,
-                                background: 'rgba(214, 0, 116, 0.05)',
+                                background: 'rgba(34, 197, 94, 0.05)',
                                 borderRadius: 8,
                                 alignItems: 'center',
-                                border: '1px solid rgba(214, 0, 116, 0.1)'
+                                border: '1px solid rgba(34, 197, 94, 0.1)'
                             }}>
                                 <div style={{
                                     fontSize: 18,
                                     fontWeight: 700,
-                                    color: '#D60074',
+                                    color: '#22C55E',
                                     textAlign: 'center'
                                 }}>
                                     {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}

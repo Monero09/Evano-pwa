@@ -193,7 +193,7 @@ export default function AdminDashboard() {
                     position: 'fixed',
                     top: 20,
                     right: 20,
-                    background: toast.type === 'success' ? '#D60074' : '#ff4d4f',
+                    background: toast.type === 'success' ? '#22C55E' : '#ff4d4f',
                     color: 'white',
                     padding: '12px 24px',
                     borderRadius: 8,
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h1>Admin Dashboard</h1>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => window.location.href = '/admin/ads'} style={{ background: '#D60074', border: 'none', color: 'white', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button onClick={() => window.location.href = '/admin/ads'} style={{ background: '#22C55E', border: 'none', color: 'white', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}>
                         Manage Ads
                     </button>
                     <button onClick={() => window.location.href = '/'} style={{ background: 'transparent', border: '1px solid #555', color: 'white', padding: '8px 16px', borderRadius: 4, cursor: 'pointer' }}>
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
                 <button
                     onClick={() => setActiveTab('pending')}
                     style={{
-                        background: activeTab === 'pending' ? 'linear-gradient(to right, #581c87, #db2777)' : 'transparent',
+                        background: activeTab === 'pending' ? 'linear-gradient(to right, #14532d, #16A34A)' : 'transparent',
                         border: 'none',
                         color: 'white',
                         padding: '12px 24px',
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                 <button
                     onClick={() => setActiveTab('approved')}
                     style={{
-                        background: activeTab === 'approved' ? 'linear-gradient(to right, #581c87, #db2777)' : 'transparent',
+                        background: activeTab === 'approved' ? 'linear-gradient(to right, #14532d, #16A34A)' : 'transparent',
                         border: 'none',
                         color: 'white',
                         padding: '12px 24px',
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
                 <button
                     onClick={() => setActiveTab('categories')}
                     style={{
-                        background: activeTab === 'categories' ? 'linear-gradient(to right, #581c87, #db2777)' : 'transparent',
+                        background: activeTab === 'categories' ? 'linear-gradient(to right, #14532d, #16A34A)' : 'transparent',
                         border: 'none',
                         color: 'white',
                         padding: '12px 24px',
@@ -283,7 +283,7 @@ export default function AdminDashboard() {
                                     <div key={vid.id} style={{ background: '#1A1F2E', padding: 15, borderRadius: 10, position: 'relative' }}>
                                         <div style={{ position: 'relative', height: 160 }}>
                                             <img src={vid.thumbnail_url} alt={vid.title} style={{ width: '100%', borderRadius: 8, height: '100%', objectFit: 'cover' }} />
-                                            <span style={{ position: 'absolute', top: 8, right: 8, background: '#D60074', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                                            <span style={{ position: 'absolute', top: 8, right: 8, background: '#22C55E', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
                                                 PENDING
                                             </span>
                                         </div>
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
                                                 onClick={() => setPreviewVideoUrl(vid.video_url)}
                                                 style={{
                                                     flex: 1,
-                                                    background: 'linear-gradient(135deg, #581c87, #D60074)',
+                                                    background: 'linear-gradient(135deg, #14532d, #22C55E)',
                                                     color: 'white',
                                                     border: 'none',
                                                     padding: '8px',
@@ -382,10 +382,10 @@ export default function AdminDashboard() {
                                                         onClick={() => handleSetFeatured(vid.id)}
                                                         style={{
                                                             background: vid.is_featured
-                                                                ? 'linear-gradient(to right, #581c87, #db2777)'
+                                                                ? 'linear-gradient(to right, #14532d, #16A34A)'
                                                                 : '#555',
                                                             color: 'white',
-                                                            border: vid.is_featured ? '2px solid #D60074' : 'none',
+                                                            border: vid.is_featured ? '2px solid #22C55E' : 'none',
                                                             padding: '8px 16px',
                                                             borderRadius: 6,
                                                             cursor: 'pointer',
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
                                                             alignItems: 'center',
                                                             gap: '6px',
                                                             margin: '0 auto',
-                                                            boxShadow: vid.is_featured ? '0 0 15px rgba(214, 0, 116, 0.5)' : 'none',
+                                                            boxShadow: vid.is_featured ? '0 0 15px rgba(34, 197, 94, 0.5)' : 'none',
                                                             transition: 'all 0.2s'
                                                         }}
                                                     >
@@ -446,12 +446,12 @@ export default function AdminDashboard() {
                     {/* Add Category Form */}
                     <div style={{
                         background: '#1A1F2E',
-                        border: '1px solid rgba(214, 0, 116, 0.2)',
+                        border: '1px solid rgba(34, 197, 94, 0.2)',
                         borderRadius: 12,
                         padding: 24,
                         marginBottom: 24
                     }}>
-                        <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: '#D60074' }}>Add New Category</h3>
+                        <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: '#22C55E' }}>Add New Category</h3>
                         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                             <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 <label style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>Category Name *</label>
@@ -471,7 +471,7 @@ export default function AdminDashboard() {
                                         outline: 'none',
                                         transition: 'border-color 0.2s'
                                     }}
-                                    onFocus={(e) => e.currentTarget.style.borderColor = '#D60074'}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#22C55E'}
                                     onBlur={(e) => e.currentTarget.style.borderColor = '#333'}
                                 />
                             </div>
@@ -493,7 +493,7 @@ export default function AdminDashboard() {
                                         outline: 'none',
                                         transition: 'border-color 0.2s'
                                     }}
-                                    onFocus={(e) => e.currentTarget.style.borderColor = '#D60074'}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#22C55E'}
                                     onBlur={(e) => e.currentTarget.style.borderColor = '#333'}
                                 />
                             </div>
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                                 style={{
                                     background: catSaving || !catName.trim()
                                         ? '#555'
-                                        : 'linear-gradient(to right, #581c87, #db2777)',
+                                        : 'linear-gradient(to right, #14532d, #16A34A)',
                                     border: 'none',
                                     color: 'white',
                                     padding: '10px 24px',
@@ -551,8 +551,8 @@ export default function AdminDashboard() {
                                                 <td style={{ padding: '14px 20px' }}>
                                                     <span style={{
                                                         display: 'inline-block',
-                                                        background: 'rgba(214, 0, 116, 0.12)',
-                                                        border: '1px solid rgba(214, 0, 116, 0.25)',
+                                                        background: 'rgba(34, 197, 94, 0.12)',
+                                                        border: '1px solid rgba(34, 197, 94, 0.25)',
                                                         color: '#f472b6',
                                                         padding: '4px 12px',
                                                         borderRadius: 20,
@@ -649,7 +649,7 @@ export default function AdminDashboard() {
                                     width: 36,
                                     height: 36,
                                     borderRadius: '50%',
-                                    background: '#D60074',
+                                    background: '#22C55E',
                                     border: 'none',
                                     color: 'white',
                                     fontSize: 20,
@@ -659,7 +659,7 @@ export default function AdminDashboard() {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     zIndex: 1,
-                                    boxShadow: '0 4px 16px rgba(214,0,116,0.5)',
+                                    boxShadow: '0 4px 16px rgba(34, 197, 94, 0.1)',
                                 }}
                                 aria-label="Close preview"
                             >

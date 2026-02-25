@@ -171,10 +171,10 @@ export default function CreatorDashboard() {
                             <div style={{
                                 height: '100%',
                                 width: `${uploadProgress}%`,
-                                background: 'linear-gradient(90deg, #581c87, #D60074)',
+                                background: 'linear-gradient(90deg, #14532d, #22C55E)',
                                 borderRadius: 99,
                                 transition: 'width 0.25s ease',
-                                boxShadow: '0 0 8px rgba(214,0,116,0.5)',
+                                boxShadow: '0 0 8px rgba(34, 197, 94, 0.2)',
                             }} />
                         </div>
                         <div style={{
@@ -191,7 +191,7 @@ export default function CreatorDashboard() {
                                         : 'Uploading video to R2…'
                                     : '✓ Saving to database…'}
                             </span>
-                            <span style={{ color: '#D60074', fontWeight: 700 }}>
+                            <span style={{ color: '#22C55E', fontWeight: 700 }}>
                                 {uploadProgress}%
                             </span>
                         </div>
@@ -210,7 +210,7 @@ export default function CreatorDashboard() {
                                     background: 'rgba(26, 31, 46, 0.6)',
                                     border: `1px solid ${video.status === 'rejected'
                                         ? 'rgba(255,77,79,0.25)'
-                                        : 'rgba(214, 0, 116, 0.1)'
+                                        : 'rgba(34, 197, 94, 0.1)'
                                         }`,
                                     borderRadius: 12,
                                     padding: 16,
@@ -221,9 +221,9 @@ export default function CreatorDashboard() {
                                     position: 'relative',
                                 }}
                                     onMouseEnter={(e) => e.currentTarget.style.borderColor =
-                                        video.status === 'rejected' ? 'rgba(255,77,79,0.5)' : 'rgba(214, 0, 116, 0.3)'}
+                                        video.status === 'rejected' ? 'rgba(255,77,79,0.5)' : 'rgba(34, 197, 94, 0.3)'}
                                     onMouseLeave={(e) => e.currentTarget.style.borderColor =
-                                        video.status === 'rejected' ? 'rgba(255,77,79,0.25)' : 'rgba(214, 0, 116, 0.1)'}
+                                        video.status === 'rejected' ? 'rgba(255,77,79,0.25)' : 'rgba(34, 197, 94, 0.1)'}
                                 >
                                     <img src={video.thumbnail_url} alt={video.title} style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>

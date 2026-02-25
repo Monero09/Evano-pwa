@@ -5,7 +5,6 @@ import SearchPage from './SearchPage';
 import WatchPage from './WatchPage';
 import NotFoundPage from './NotFoundPage';
 import LoginPage from './LoginPage';
-import PremiumPage from './PremiumPage';
 import CreatorDashboard from './CreatorDashboard';
 import AdminDashboard from './AdminDashboard';
 import AdminAdsPage from './AdminAdsPage';
@@ -83,7 +82,6 @@ export default function App() {
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/watch/:id" element={<WatchPage />} />
                         <Route path="/login" element={<LoginPage />} />
-                        <Route path="/premium" element={<PremiumPage />} />
                         <Route
                             path="/creator"
                             element={
