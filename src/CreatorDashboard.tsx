@@ -13,7 +13,7 @@ export default function CreatorDashboard() {
     const navigate = useNavigate();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('Movies');
+    const [category, setCategory] = useState('');
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -66,8 +66,8 @@ export default function CreatorDashboard() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !videoFile || !thumbnailFile || !title) {
-            showToast('Please fill in all fields and select files.', 'error');
+        if (!user || !title || !description || !videoFile || !thumbnailFile || !category) {
+            showToast('Please fill all fields, select a category, and upload both files.', 'error');
             return;
         }
 
@@ -135,11 +135,10 @@ export default function CreatorDashboard() {
                 <select
                     value={category} onChange={(e) => setCategory(e.target.value)}
                     style={{ padding: 12, borderRadius: 8, background: '#1A1F2E', border: '1px solid #333', color: 'white' }}
+                    required
                 >
-                    {(categories.length > 0
-                        ? categories
-                        : ['Movies', 'Podcast', 'Music', 'Documentary', 'Skit video']
-                    ).map(cat => (
+                    <option value="" disabled>Select a Category...</option>
+                    {categories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                     ))}
                 </select>

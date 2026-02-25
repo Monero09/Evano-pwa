@@ -114,6 +114,9 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
 
     // ── Tap handler: 1 tap anywhere outside controls = toggle controls ──
     const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
+        // Prevent ghostly double-fires from conflicting pointer events
+        e.preventDefault();
+
         // Ignore clicks that land directly on the controls UI
         if ((e.target as HTMLElement).closest('.custom-controls')) return;
 
@@ -202,6 +205,8 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
             ref={containerRef}
             className="custom-player-container"
             onClick={handleScreenTap}
+            // Add onTouchEnd so iOS/Android grabs the tap correctly when coming back from idle
+            onTouchEnd={handleScreenTap}
             style={{
                 position: 'relative',
                 width: '100%',
@@ -263,6 +268,7 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                         className="center-controls"
                         onClick={e => e.stopPropagation()}
                         onTouchEnd={e => e.stopPropagation()}
+                        onPointerDown={e => e.stopPropagation()}
                     >
                         {/* -10s rewind */}
                         <button
