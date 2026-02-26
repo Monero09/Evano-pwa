@@ -10,6 +10,7 @@ import UpdatePassword from './UpdatePassword';
 import CreatorDashboard from './CreatorDashboard';
 import AdminDashboard from './AdminDashboard';
 import AdminAdsPage from './AdminAdsPage';
+import ProfilePage from './ProfilePage';
 import AuthGuard from './components/AuthGuard';
 import Sidebar from './components/Sidebar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -79,6 +80,7 @@ export default function App() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/update-password" element={<UpdatePassword />} />
+                        <Route path="/profile" element={<ProfilePage />} />
                         <Route
                             path="/creator"
                             element={

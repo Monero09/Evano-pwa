@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory } from './lib/api';
-import type { Video } from './lib/types';
+import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory, getAdById } from './lib/api';
+import type { Video, Ad } from './lib/types';
 import { useAuth } from './components/AuthProvider';
 
 // ==========================================
@@ -12,9 +12,10 @@ type PlayerProps = {
     videoSrc: string;
     poster?: string;
     onViewCounted?: () => void;
+    adsQueue?: Ad[];
 };
 
-function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
+function CustomVideoPlayer({ videoSrc, poster, onViewCounted, adsQueue }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -24,6 +25,36 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
     const hideTimerRef = useRef<number | null>(null);
+
+    // ── Ad Queue Management ───────────────────────────────────────────
+    const [queueIndex, setQueueIndex] = useState(0);
+    const queueLimit = adsQueue?.length || 0;
+    const isAd = queueIndex < queueLimit;
+    const currentSrc = isAd ? adsQueue![queueIndex].url : videoSrc;
+    const currentPoster = isAd ? undefined : poster;
+
+    const isAdRef = useRef(isAd);
+    useEffect(() => {
+        isAdRef.current = isAd;
+    }, [isAd]);
+
+    useEffect(() => {
+        setQueueIndex(0);
+    }, [videoSrc]);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.load();
+        if (queueIndex > 0) {
+            video.play().catch(e => console.error("Autoplay next failed", e));
+        }
+    }, [currentSrc, queueIndex]);
+
+    const handleSkipAd = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        setQueueIndex(q => q + 1);
+    };
 
     // ── 15-second view threshold ───────────────────────────────────────
     // Tracks cumulative seconds of REAL video playback (ads excluded).
@@ -91,15 +122,25 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
         const onMeta = () => setDuration(isNaN(video.duration) ? 0 : video.duration);
         const onPlay = () => { setIsPlaying(true); scheduleHide.current(); };
         const onPause = () => { setIsPlaying(false); setShowControls(true); };
+        const onEnded = () => {
+            if (isAdRef.current) {
+                setQueueIndex(q => q + 1);
+            } else {
+                setIsPlaying(false);
+                setShowControls(true);
+            }
+        };
         video.addEventListener('timeupdate', onTime);
         video.addEventListener('loadedmetadata', onMeta);
         video.addEventListener('play', onPlay);
         video.addEventListener('pause', onPause);
+        video.addEventListener('ended', onEnded);
         return () => {
             video.removeEventListener('timeupdate', onTime);
             video.removeEventListener('loadedmetadata', onMeta);
             video.removeEventListener('play', onPlay);
             video.removeEventListener('pause', onPause);
+            video.removeEventListener('ended', onEnded);
         };
     }, []);
 
@@ -131,6 +172,7 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
     // ── Progress bar: mouse click ─────────────────────────────────────
     const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
+        if (isAdRef.current) return;
         const video = videoRef.current;
         const bar = progressBarRef.current;
         if (!video || !bar) return;
@@ -142,6 +184,7 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
     // ── Progress bar: touch drag ──────────────────────────────────────
     const handleProgressTouch = (e: React.TouchEvent<HTMLDivElement>) => {
         e.stopPropagation();
+        if (isAdRef.current) return;
         const video = videoRef.current;
         const bar = progressBarRef.current;
         if (!video || !bar || !e.touches[0]) return;
@@ -229,8 +272,8 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                 {/* ── <video> — pointer-events:none, container handles all input ── */}
                 <video
                     ref={videoRef}
-                    src={videoSrc}
-                    poster={poster}
+                    src={currentSrc}
+                    poster={currentPoster}
                     playsInline
                     style={{
                         position: 'absolute', top: 0, left: 0,
@@ -240,7 +283,41 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                     }}
                 />
 
+                {/* ── Ad Badge Overlay ── */}
+                {isAd && (
+                    <div style={{
+                        position: 'absolute', top: 20, left: 20, zIndex: 30,
+                        background: 'rgba(0,0,0,0.7)', color: 'white', padding: '6px 14px',
+                        borderRadius: 8, fontSize: 13, fontWeight: 700,
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        backdropFilter: 'blur(4px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        pointerEvents: 'none'
+                    }}>
+                        Ad {queueIndex + 1} of {queueLimit} • <span style={{ color: '#22C55E' }}>{Math.max(0, Math.ceil((videoRef.current?.duration || 0) - currentTime))}s</span>
+                    </div>
+                )}
 
+                {/* ── Ad Skip Button ── */}
+                {isAd && currentTime >= 5 && (
+                    <button
+                        onPointerDown={handleSkipAd}
+                        style={{
+                            position: 'absolute', bottom: 60, right: 20, zIndex: 40,
+                            background: 'rgba(0,0,0,0.75)', color: 'white', padding: '10px 20px',
+                            borderRadius: 8, fontSize: 14, fontWeight: 600,
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            backdropFilter: 'blur(6px)',
+                            WebkitBackdropFilter: 'blur(6px)',
+                            cursor: 'pointer',
+                            pointerEvents: 'auto',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        }}
+                    >
+                        Skip Ad <span style={{ fontSize: 18, lineHeight: 1 }}>⏭</span>
+                    </button>
+                )}
 
                 {/* ═══════════════════════════════════════════════════════════
                     CONTROLS OVERLAY
@@ -277,9 +354,11 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                             className="seek-btn"
                             onPointerDown={e => {
                                 e.stopPropagation();
+                                if (isAd) return;
                                 if (videoRef.current) videoRef.current.currentTime -= 10;
                             }}
                             aria-label="Rewind 10 seconds"
+                            style={{ opacity: isAd ? 0.4 : 1, cursor: isAd ? 'not-allowed' : 'pointer' }}
                         >
                             <span style={{ fontSize: 11, display: 'block', lineHeight: 1 }}>-10s</span>
                             <span style={{ fontSize: 20 }}>↺</span>
@@ -300,9 +379,11 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                             className="seek-btn"
                             onPointerDown={e => {
                                 e.stopPropagation();
+                                if (isAd) return;
                                 if (videoRef.current) videoRef.current.currentTime += 10;
                             }}
                             aria-label="Fast-forward 10 seconds"
+                            style={{ opacity: isAd ? 0.4 : 1, cursor: isAd ? 'not-allowed' : 'pointer' }}
                         >
                             <span style={{ fontSize: 11, display: 'block', lineHeight: 1 }}>+10s</span>
                             <span style={{ fontSize: 20 }}>↻</span>
@@ -319,13 +400,13 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
                         {/* ── Progress bar with large touch target ── */}
                         <div
                             ref={progressBarRef}
-                            onClick={handleSeekClick}
-                            onTouchStart={handleProgressTouch}
-                            onTouchMove={handleProgressTouch}
+                            onClick={isAd ? undefined : handleSeekClick}
+                            onTouchStart={isAd ? undefined : handleProgressTouch}
+                            onTouchMove={isAd ? undefined : handleProgressTouch}
                             style={{
                                 width: '100%', height: 20, // tall touch target
                                 display: 'flex', alignItems: 'center',
-                                cursor: 'pointer',
+                                cursor: isAd ? 'not-allowed' : 'pointer',
                             }}
                         >
                             <div style={{
@@ -481,10 +562,11 @@ function CustomVideoPlayer({ videoSrc, poster, onViewCounted }: PlayerProps) {
 export default function WatchPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, tier } = useAuth();
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
     const [inMyList, setInMyList] = useState(false);
+    const [adsQueue, setAdsQueue] = useState<Ad[]>([]);
 
     useEffect(() => {
         fetchVideos().then(data => {
@@ -507,7 +589,26 @@ export default function WatchPage() {
             addToHistory(user.id, video.id);
             checkInWatchLater(user.id, video.id).then(setInMyList);
         }
-    }, [video, user]);
+
+        // 2. Load Ads if enabled and user is not premium
+        const loadAds = async () => {
+            if (video.ads_enabled && tier !== 'premium') {
+                const ads: Ad[] = [];
+                if (video.preroll_ad_id) {
+                    const ad1 = await getAdById(video.preroll_ad_id).catch(() => null);
+                    if (ad1) ads.push(ad1);
+                }
+                if (video.preroll_ad_id_2) {
+                    const ad2 = await getAdById(video.preroll_ad_id_2).catch(() => null);
+                    if (ad2) ads.push(ad2);
+                }
+                setAdsQueue(ads);
+            } else {
+                setAdsQueue([]);
+            }
+        };
+        loadAds();
+    }, [video, user, tier]);
 
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
 
@@ -543,6 +644,7 @@ export default function WatchPage() {
                     <CustomVideoPlayer
                         videoSrc={video.video_url}
                         poster={video.thumbnail_url}
+                        adsQueue={adsQueue}
                         onViewCounted={() => {
                             import('./lib/api').then(mod => mod.incrementView(video.id));
                         }}

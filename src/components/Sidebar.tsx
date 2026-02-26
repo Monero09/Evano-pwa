@@ -141,6 +141,7 @@ export default function Sidebar() {
                             transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                             border: '1px solid rgba(34, 197, 94, 0.2)'
                         }}
+                            onClick={() => handleNavigation('/profile')}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)';
                                 e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
