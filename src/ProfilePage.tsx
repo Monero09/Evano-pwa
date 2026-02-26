@@ -72,7 +72,7 @@ export default function ProfilePage() {
     const displayVideos = activeTab === 'history' ? history : watchlist;
 
     return (
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: 20, color: 'white' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: 20, paddingTop: 80, color: 'white' }}>
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
                 title="Delete Account"
