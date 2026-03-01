@@ -61,12 +61,12 @@ export default function Sidebar() {
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
 
-            {/* Notifications Bell (Fixed Top-Right) */}
+            {/* Notifications Bell (Fixed Top-Right — sits left of the navbar search icon) */}
             <div
                 style={{
                     position: 'fixed',
                     top: 15,
-                    right: 20,
+                    right: 70,
                     zIndex: 2000,
                 }}
             >

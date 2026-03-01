@@ -205,8 +205,27 @@ export async function updateVideoStatus(id: string, status: 'approved' | 'reject
 }
 
 /**
+ * Fire-and-forget helper that invokes the send-notification-email Edge Function.
+ * Never throws — email failure must not break the approval flow.
+ */
+async function sendNotificationEmail(
+    userId: string,
+    title: string,
+    message: string
+): Promise<void> {
+    try {
+        const { error } = await supabase.functions.invoke('send-notification-email', {
+            body: { userId, title, message },
+        });
+        if (error) console.error('Email edge function error:', error.message);
+    } catch (e) {
+        console.error('Failed to invoke email edge function:', e);
+    }
+}
+
+/**
  * Approve a pending video and notify the creator.
- * Combines status update + notification insert in one call.
+ * Combines status update + in-app notification + email in one call.
  */
 export async function approveVideo(videoId: string): Promise<void> {
     // 1. Fetch the video to get creator id and title
@@ -221,16 +240,22 @@ export async function approveVideo(videoId: string): Promise<void> {
     // 2. Update status
     await updateVideoStatus(videoId, 'approved');
 
-    // 3. Insert notification for the creator
+    const notifTitle = 'Video Approved! ✅';
+    const notifMsg = `Your video "${video.title}" is now live.`;
+
+    // 3. Insert in-app notification for the creator
     const { error: notifErr } = await supabase
         .from('notifications')
         .insert({
             user_id: video.uploader_id,
-            title: 'Video Approved! ✅',
-            message: `Your video "${video.title}" is now live.`,
+            title: notifTitle,
+            message: notifMsg,
         });
 
     if (notifErr) console.error('Failed to send approval notification:', notifErr.message);
+
+    // 4. Send email notification (non-blocking)
+    await sendNotificationEmail(video.uploader_id, notifTitle, notifMsg);
 }
 
 /**
@@ -249,16 +274,22 @@ export async function rejectVideo(videoId: string): Promise<void> {
     // 2. Update status
     await updateVideoStatus(videoId, 'rejected');
 
-    // 3. Insert notification for the creator
+    const notifTitle = 'Video Rejected ❌';
+    const notifMsg = `Your video "${video.title}" was not approved to be published.`;
+
+    // 3. Insert in-app notification for the creator
     const { error: notifErr } = await supabase
         .from('notifications')
         .insert({
             user_id: video.uploader_id,
-            title: 'Video Rejected ❌',
-            message: `Your video "${video.title}" was not approved to be published.`,
+            title: notifTitle,
+            message: notifMsg,
         });
 
     if (notifErr) console.error('Failed to send rejection notification:', notifErr.message);
+
+    // 4. Send email notification (non-blocking)
+    await sendNotificationEmail(video.uploader_id, notifTitle, notifMsg);
 }
 
 export async function deleteVideo(videoId: string) {
