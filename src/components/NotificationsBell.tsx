@@ -28,9 +28,19 @@ export default function NotificationsBell() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isMarkingAll, setIsMarkingAll] = useState(false);
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== 'undefined' && window.innerWidth <= 480
+    );
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+    // ── track viewport width changes ───────────────────────────────────────
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 480);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     // ── initial fetch ───────────────────────────────────────────────────────
     const fetchNotifications = useCallback(async () => {
@@ -69,8 +79,9 @@ export default function NotificationsBell() {
         };
     }, [user]);
 
-    // ── close dropdown on outside click ────────────────────────────────────
+    // ── close dropdown on outside click (desktop only) ─────────────────────
     useEffect(() => {
+        if (isMobile) return; // mobile uses the backdrop overlay instead
         const handler = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setIsOpen(false);
@@ -78,7 +89,7 @@ export default function NotificationsBell() {
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
-    }, []);
+    }, [isMobile]);
 
     // ── mark single as read ─────────────────────────────────────────────────
     const handleMarkRead = async (notif: Notification) => {
@@ -115,6 +126,23 @@ export default function NotificationsBell() {
 
     // ── Don't render for non-logged-in users ──────────────────────────────
     if (!user) return null;
+
+    // ── dropdown position: centered+fixed on mobile, absolute on desktop ───
+    const dropdownPositionStyle: React.CSSProperties = isMobile
+        ? {
+            position: 'fixed',
+            top: '68px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100vw - 32px)',
+            maxWidth: 380,
+        }
+        : {
+            position: 'absolute',
+            top: 'calc(100% + 12px)',
+            right: 0,
+            width: 340,
+        };
 
     return (
         <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -185,21 +213,34 @@ export default function NotificationsBell() {
                 )}
             </button>
 
+            {/* Mobile backdrop — tap outside to close */}
+            {isOpen && isMobile && (
+                <div
+                    onClick={() => setIsOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 2999,
+                        background: 'rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(2px)',
+                        WebkitBackdropFilter: 'blur(2px)',
+                    }}
+                />
+            )}
+
             {/* Dropdown Panel */}
             {isOpen && (
                 <div
                     id="notifications-dropdown"
                     style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 12px)',
-                        right: 0,
-                        width: 340,
-                        maxHeight: 460,
+                        ...dropdownPositionStyle,
+                        maxHeight: isMobile ? '70vh' : 460,
                         background: 'rgba(18, 22, 36, 0.98)',
                         backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
                         border: '1px solid rgba(34, 197, 94, 0.2)',
                         borderRadius: 16,
-                        boxShadow: '0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+                        boxShadow: '0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)',
                         zIndex: 3000,
                         display: 'flex',
                         flexDirection: 'column',
@@ -240,32 +281,58 @@ export default function NotificationsBell() {
                             )}
                         </div>
 
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={handleMarkAllRead}
-                                disabled={isMarkingAll}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#22C55E',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    opacity: isMarkingAll ? 0.5 : 1,
-                                    padding: '4px 8px',
-                                    borderRadius: 6,
-                                    transition: 'background 0.2s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(34,197,94,0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'none';
-                                }}
-                            >
-                                {isMarkingAll ? 'Clearing…' : 'Mark all read'}
-                            </button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={handleMarkAllRead}
+                                    disabled={isMarkingAll}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#22C55E',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        opacity: isMarkingAll ? 0.5 : 1,
+                                        padding: '4px 8px',
+                                        borderRadius: 6,
+                                        transition: 'background 0.2s',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(34,197,94,0.1)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                                >
+                                    {isMarkingAll ? 'Clearing…' : 'Mark all read'}
+                                </button>
+                            )}
+                            {/* ✕ close button — visible on mobile */}
+                            {isMobile && (
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    aria-label="Close notifications"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '50%',
+                                        width: 28,
+                                        height: 28,
+                                        color: '#aaa',
+                                        fontSize: 18,
+                                        lineHeight: 1,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        transition: 'background 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                >
+                                    ×
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Notification List */}
