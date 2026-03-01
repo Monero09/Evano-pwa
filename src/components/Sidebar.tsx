@@ -10,6 +10,7 @@ import {
     ShieldAlert,
     LogOut
 } from 'lucide-react';
+import NotificationsBell from './NotificationsBell';
 
 export default function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -59,6 +60,18 @@ export default function Sidebar() {
             >
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
+
+            {/* Notifications Bell (Fixed Top-Right) */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 15,
+                    right: 20,
+                    zIndex: 2000,
+                }}
+            >
+                <NotificationsBell />
+            </div>
 
             {/* Sidebar Drawer Overly */}
             {isOpen && (

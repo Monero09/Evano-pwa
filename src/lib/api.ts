@@ -204,6 +204,63 @@ export async function updateVideoStatus(id: string, status: 'approved' | 'reject
     return data;
 }
 
+/**
+ * Approve a pending video and notify the creator.
+ * Combines status update + notification insert in one call.
+ */
+export async function approveVideo(videoId: string): Promise<void> {
+    // 1. Fetch the video to get creator id and title
+    const { data: video, error: fetchErr } = await supabase
+        .from('videos')
+        .select('title, uploader_id')
+        .eq('id', videoId)
+        .single();
+
+    if (fetchErr || !video) throw new Error(`Could not fetch video: ${fetchErr?.message}`);
+
+    // 2. Update status
+    await updateVideoStatus(videoId, 'approved');
+
+    // 3. Insert notification for the creator
+    const { error: notifErr } = await supabase
+        .from('notifications')
+        .insert({
+            user_id: video.uploader_id,
+            title: 'Video Approved! ✅',
+            message: `Your video "${video.title}" is now live.`,
+        });
+
+    if (notifErr) console.error('Failed to send approval notification:', notifErr.message);
+}
+
+/**
+ * Reject a pending video and notify the creator.
+ */
+export async function rejectVideo(videoId: string): Promise<void> {
+    // 1. Fetch the video
+    const { data: video, error: fetchErr } = await supabase
+        .from('videos')
+        .select('title, uploader_id')
+        .eq('id', videoId)
+        .single();
+
+    if (fetchErr || !video) throw new Error(`Could not fetch video: ${fetchErr?.message}`);
+
+    // 2. Update status
+    await updateVideoStatus(videoId, 'rejected');
+
+    // 3. Insert notification for the creator
+    const { error: notifErr } = await supabase
+        .from('notifications')
+        .insert({
+            user_id: video.uploader_id,
+            title: 'Video Rejected ❌',
+            message: `Your video "${video.title}" was not approved to be published.`,
+        });
+
+    if (notifErr) console.error('Failed to send rejection notification:', notifErr.message);
+}
+
 export async function deleteVideo(videoId: string) {
     // Ideally, we fetch the video to get its file paths and delete from storage first.
     const { data: video, error: fetchError } = await supabase
@@ -725,4 +782,54 @@ export async function deleteCategoryIfExists(id: string): Promise<boolean> {
 
     if (deleteError) throw new Error(`Failed to delete category: ${deleteError.message}`);
     return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// --- 15. NOTIFICATIONS ---
+// ─────────────────────────────────────────────────────────────
+
+export interface Notification {
+    id: string;
+    user_id: string;
+    title: string;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+}
+
+/** Fetch all notifications for the current user, newest first. */
+export async function getUserNotifications(userId: string): Promise<Notification[]> {
+    const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+    if (error) {
+        console.error('Error fetching notifications:', error.message);
+        return [];
+    }
+    return (data || []) as Notification[];
+}
+
+/** Mark a single notification as read. */
+export async function markNotificationRead(notificationId: string): Promise<void> {
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+
+    if (error) throw new Error(`Failed to mark notification read: ${error.message}`);
+}
+
+/** Mark ALL unread notifications for a user as read. */
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+    if (error) throw new Error(`Failed to mark all notifications read: ${error.message}`);
 }

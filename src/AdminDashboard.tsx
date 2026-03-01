@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './components/AuthProvider';
-import { getPendingVideos, updateVideoStatus, getCategories, createCategory, deleteCategory, deleteVideo } from './lib/api';
+import { getPendingVideos, approveVideo, rejectVideo, getCategories, createCategory, deleteCategory, deleteVideo } from './lib/api';
 import type { Category } from './lib/api';
 import { supabase } from './lib/supabase';
 import type { Video } from './lib/types';
@@ -108,8 +108,13 @@ export default function AdminDashboard() {
 
     const handleStatusUpdate = async (id: string, status: 'approved' | 'rejected') => {
         try {
-            await updateVideoStatus(id, status);
-            // Remove from list
+            // Use the notification-aware helpers
+            if (status === 'approved') {
+                await approveVideo(id);
+            } else {
+                await rejectVideo(id);
+            }
+            // Remove from pending list
             setPendingVideos(prev => prev.filter(v => v.id !== id));
             showToast(`Video ${status}!`, 'success');
 
