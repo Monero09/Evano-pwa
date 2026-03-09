@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchVideos, addToWatchLater, removeFromWatchLater, checkInWatchLater, addToHistory, getAdById } from './lib/api';
 import type { Video, Ad } from './lib/types';
 import { useAuth } from './components/AuthProvider';
+import SmartMediaPlayer from './components/SmartMediaPlayer';
 
 // ==========================================
 // CUSTOM VIDEO PLAYER COMPONENT
@@ -641,13 +642,18 @@ export default function WatchPage() {
             <main className="watch-root">
                 {/* Video Player Section */}
                 <section className="watch-hero">
-                    <CustomVideoPlayer
-                        videoSrc={video.video_url}
-                        poster={video.thumbnail_url}
-                        adsQueue={adsQueue}
-                        onViewCounted={() => {
-                            import('./lib/api').then(mod => mod.incrementView(video.id));
-                        }}
+                    <SmartMediaPlayer
+                        videoUrl={video.video_url}
+                        renderNative={(url) => (
+                            <CustomVideoPlayer
+                                videoSrc={url}
+                                poster={video.thumbnail_url}
+                                adsQueue={adsQueue}
+                                onViewCounted={() => {
+                                    import('./lib/api').then(mod => mod.incrementView(video.id));
+                                }}
+                            />
+                        )}
                     />
                 </section>
 

@@ -5,13 +5,14 @@ import type { Category } from './lib/api';
 import { supabase } from './lib/supabase';
 import type { Video } from './lib/types';
 import ConfirmModal from './components/ConfirmModal';
+import AdminUpload from './components/AdminUpload';
 
 export default function AdminDashboard() {
     const { user, role, loading } = useAuth();
     const [pendingVideos, setPendingVideos] = useState<Video[]>([]);
     const [approvedVideos, setApprovedVideos] = useState<Video[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
-    const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'categories'>('pending');
+    const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'categories' | 'upload'>('pending');
 
     // Categories state
     const [categories, setCategories] = useState<Category[]>([]);
@@ -231,6 +232,21 @@ export default function AdminDashboard() {
                 >
                     🗂 Categories ({categories.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab('upload')}
+                    style={{
+                        background: activeTab === 'upload' ? 'linear-gradient(to right, #14532d, #16A34A)' : 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '15px'
+                    }}
+                >
+                    ⬆️ Upload
+                </button>
             </div>
 
             {isLoadingData ? (
@@ -369,6 +385,22 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
+                </div>
+            ) : activeTab === 'upload' ? (
+                // UPLOAD TAB
+                <div style={{
+                    background: '#1A1F2E',
+                    border: '1px solid rgba(34, 197, 94, 0.15)',
+                    borderRadius: 12,
+                    padding: 28,
+                }}
+                >
+                    <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700 }}>Upload Content</h2>
+                    <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 24 }}>
+                        Switch between <strong style={{ color: '#22C55E' }}>Embed Mode</strong> (YouTube / Spotify links) and standard file uploads.
+                        Admin uploads are published immediately — no approval needed.
+                    </p>
+                    <AdminUpload onSuccess={loadVideos} />
                 </div>
             ) : (
                 // MANAGE CATEGORIES TAB

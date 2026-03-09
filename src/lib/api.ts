@@ -864,3 +864,50 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 
     if (error) throw new Error(`Failed to mark all notifications read: ${error.message}`);
 }
+
+// ─────────────────────────────────────────────────────────────
+// --- 16. ADMIN EMBED UPLOAD ---
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Saves an embed link (YouTube / Spotify) directly to the videos table.
+ * No file is uploaded — the thumbnail URL is sourced automatically.
+ * Admin-uploaded embeds are immediately approved and go live.
+ */
+export async function uploadEmbedVideo(params: {
+    title: string;
+    category: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+    adminUserId: string;
+}): Promise<void> {
+    const { title, category, videoUrl, thumbnailUrl, adminUserId } = params;
+
+    // Resolve category name → category_id
+    const { data: categoryData, error: categoryError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', category)
+        .single();
+
+    if (categoryError || !categoryData) {
+        throw new Error(`Category "${category}" not found. Please create it first.`);
+    }
+
+    const { error } = await supabase
+        .from('videos')
+        .insert({
+            title,
+            description: '',            // embeds don't need a description
+            category_id: categoryData.id,
+            video_url: videoUrl,
+            thumbnail_url: thumbnailUrl,
+            status: 'approved',         // admin uploads go live immediately
+            uploader_id: adminUserId,
+            created_by: adminUserId,
+            view_count: 0,
+            ads_enabled: true,
+        });
+
+    if (error) throw new Error(`Failed to save embed: ${error.message}`);
+}
