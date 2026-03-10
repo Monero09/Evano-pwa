@@ -644,6 +644,7 @@ export default function WatchPage() {
                 <section className="watch-hero">
                     <SmartMediaPlayer
                         videoUrl={video.video_url}
+                        recommendedVideos={recommended}
                         renderNative={(url) => (
                             <CustomVideoPlayer
                                 videoSrc={url}
