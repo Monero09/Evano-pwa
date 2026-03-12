@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './components/AuthProvider';
-import { getPendingVideos, approveVideo, rejectVideo, getCategories, createCategory, deleteCategory, deleteVideo } from './lib/api';
+import { getPendingVideos, approveVideo, rejectVideo, getCategories, createCategory, deleteCategory } from './lib/api';
 import type { Category } from './lib/api';
 import { supabase } from './lib/supabase';
 import type { Video } from './lib/types';
@@ -129,18 +129,31 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleDeleteVideo = (id: string, title: string, isPending: boolean) => {
+    const handleDeleteVideo = (id: string, title: string, isPending: boolean, videoUrl?: string) => {
         setPendingAction({
             title: 'Delete Video',
             message: `Are you sure you want to permanently delete "${title}"? This removes the video file and cannot be undone.`,
             confirmText: 'Yes, Delete Forever',
             action: async () => {
-                await deleteVideo(id);
+                // Optimistically remove from local state immediately
                 if (isPending) {
                     setPendingVideos(prev => prev.filter(v => v.id !== id));
                 } else {
                     setApprovedVideos(prev => prev.filter(v => v.id !== id));
                 }
+
+                // Delete from R2 + Supabase via the secure serverless function
+                const res = await fetch('/api/delete-video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoId: id, videoUrl: videoUrl ?? '' }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error ?? 'Failed to delete video');
+                }
+
                 showToast('Video deleted successfully', 'success');
             },
         });
@@ -306,7 +319,7 @@ export default function AdminDashboard() {
                                                 ▶ Watch
                                             </button>
                                             <button
-                                                onClick={() => handleDeleteVideo(vid.id, vid.title, true)}
+                                                onClick={() => handleDeleteVideo(vid.id, vid.title, true, vid.video_url)}
                                                 style={{ background: 'transparent', color: '#ff4d4f', border: '1px solid #ff4d4f', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' }}
                                             >
                                                 Delete
@@ -360,7 +373,7 @@ export default function AdminDashboard() {
                                                 </td>
                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                     <button
-                                                        onClick={() => handleDeleteVideo(vid.id, vid.title, false)}
+                                                        onClick={() => handleDeleteVideo(vid.id, vid.title, false, vid.video_url)}
                                                         style={{
                                                             background: 'transparent',
                                                             color: '#ff4d4f',
